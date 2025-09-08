@@ -49,13 +49,26 @@ const upload = multer({
 });
 
 // Middleware
-// Configuration CORS pour permettre les requêtes depuis le frontend
+// Configuration CORS pour permettre les requêtes depuis le frontend (local + Vercel)
+const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:3002,https://garage-frontend-henna.vercel.app')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: ['http://localhost:3002', 'http://localhost:3000'],
+  origin: (origin, callback) => {
+    // Autoriser requêtes sans en-tête Origin (ex: curl, même origine)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Gérer explicitement les requêtes preflight
+app.options('*', cors());
 app.use(express.json({ limit: '10mb' })); // Augmenter la limite pour les images
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use('/uploads', express.static('uploads')); // Servir les fichiers statiques
