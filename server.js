@@ -49,26 +49,37 @@ const upload = multer({
 });
 
 // Middleware
-// Configuration CORS pour permettre les requêtes depuis le frontend (local + Vercel)
-const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:3002,https://garage-frontend-henna.vercel.app')
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean);
+// Configuration CORS pour permettre les requêtes depuis le frontend
+// Autorise localhost en dev, et un domaine configurable (ex: Vercel) via FRONTEND_ORIGIN
+const allowedOrigins = new Set([
+  'http://localhost:3000',
+  'http://localhost:3002',
+  process.env.FRONTEND_ORIGIN || ''
+].filter(Boolean));
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
-    // Autoriser requêtes sans en-tête Origin (ex: curl, même origine)
+    // Requêtes sans origin (ex: curl, outils internes) → autoriser
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+
+    // Autoriser explicitement les origines configurées
+    if (allowedOrigins.has(origin)) return callback(null, true);
+
+    // Autoriser les previews Vercel (*.vercel.app)
+    const isVercel = /\.vercel\.app$/i.test(new URL(origin).hostname || '');
+    if (isVercel) return callback(null, true);
+
+    // Refuser sinon
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
-}));
+};
 
-// Gérer explicitement les requêtes preflight
-app.options('*', cors());
+app.use(cors(corsOptions));
+// Préflight explicite
+app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '10mb' })); // Augmenter la limite pour les images
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use('/uploads', express.static('uploads')); // Servir les fichiers statiques
