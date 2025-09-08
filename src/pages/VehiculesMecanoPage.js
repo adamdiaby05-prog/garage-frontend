@@ -3,12 +3,6 @@ import {
   Box,
   Typography,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   CircularProgress,
   Alert,
   Chip,
@@ -16,8 +10,7 @@ import {
   CardContent,
   Grid
 } from '@mui/material';
-import { DirectionsCar, Person, Phone, Email, ElectricBolt, LocalGasStation, Nature, CheckCircle } from '@mui/icons-material';
-import { vehiculesAPI } from '../services/api';
+import { DirectionsCar, Person, Phone, Email, ElectricBolt, LocalGasStation, Nature } from '@mui/icons-material';
 import ModernPageTemplate from '../components/ModernPageTemplate';
 import AuthGuard from '../components/AuthGuard';
 import MecanicienAuthError from '../components/MecanicienAuthError';
