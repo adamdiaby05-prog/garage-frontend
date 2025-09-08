@@ -84,6 +84,15 @@ app.use(express.json({ limit: '10mb' })); // Augmenter la limite pour les images
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use('/uploads', express.static('uploads')); // Servir les fichiers statiques
 
+// Routes de santé et racine pour environnement PaaS (Render, etc.)
+app.get('/', (req, res) => {
+  res.send('Garage API backend is running');
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, uptime: process.uptime(), timestamp: Date.now() });
+});
+
 // Configuration de la base de données
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
