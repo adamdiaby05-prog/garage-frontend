@@ -2,7 +2,8 @@
 export const getProductImage = (produit) => {
   // Si le produit a une vraie image depuis la base de données, l'utiliser
   if (produit.image && produit.image.startsWith('/uploads/')) {
-    return `http://localhost:5000${produit.image}`;
+    const SERVER_BASE = (process.env.REACT_APP_API_BASE_URL || '/api').replace(/\/api\/?$/, '');
+    return `${SERVER_BASE}${produit.image}`;
   }
   
   // Images par défaut selon la catégorie

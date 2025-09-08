@@ -23,7 +23,8 @@ const CommandesPage = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('http://localhost:5000/api/commandes');
+      const API_BASE = process.env.REACT_APP_API_BASE_URL || '/api';
+      const response = await fetch(`${API_BASE}/commandes`);
       if (!response.ok) {
         throw new Error('Erreur lors du chargement des commandes');
       }
@@ -34,7 +35,8 @@ const CommandesPage = () => {
         if (!raw) return '';
         // Si chemin local uploads → construire URL absolue backend
         if (raw.startsWith('/uploads/') || raw.startsWith('uploads/')) {
-          return `http://localhost:5000/${raw.replace(/^\/?/, '')}`;
+          const SERVER_BASE = (process.env.REACT_APP_API_BASE_URL || '/api').replace(/\/api\/?$/, '');
+          return `${SERVER_BASE}/${raw.replace(/^\/?/, '')}`;
         }
         // Déjà une data URL complète
         if (raw.startsWith('data:image/')) return raw.replace(/\s+/g, '');
@@ -104,7 +106,7 @@ const CommandesPage = () => {
       if (!id) return;
       const ok = window.confirm(`Supprimer la commande ${id} ?`);
       if (!ok) return;
-      const resp = await fetch(`http://localhost:5000/api/commandes/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const resp = await fetch(`${API_BASE}/commandes/${encodeURIComponent(id)}`, { method: 'DELETE' });
       if (!resp.ok) throw new Error('Suppression échouée');
       setOrders(prev => prev.filter(o => o.id !== id));
     } catch (e) {

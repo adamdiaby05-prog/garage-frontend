@@ -66,7 +66,8 @@ const MesReparationsContent = () => {
       console.log('👤 User:', userData);
       
       // Appel API direct avec headers explicites
-      const response = await fetch('http://localhost:5000/api/mecanicien/reparations', {
+      const API_BASE = process.env.REACT_APP_API_BASE_URL || '/api';
+      const response = await fetch(`${API_BASE}/mecanicien/reparations`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

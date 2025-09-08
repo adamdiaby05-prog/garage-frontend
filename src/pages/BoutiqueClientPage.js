@@ -65,6 +65,8 @@ const getImageByCategory = (category) => {
 };
 
 const BoutiqueClientPage = () => {
+  const API_BASE = process.env.REACT_APP_API_BASE_URL || '/api';
+  const SERVER_BASE = API_BASE.replace(/\/api\/?$/, '');
   const navigate = useNavigate();
   const [produits, setProduits] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -112,7 +114,7 @@ const BoutiqueClientPage = () => {
         setLoading(true);
         
         // Charger depuis l'API backend
-        const response = await fetch('http://localhost:5000/api/boutique/produits');
+        const response = await fetch(`${API_BASE}/boutique/produits`);
         if (response.ok) {
           const data = await response.json();
           console.log('Produits reçus de la base:', data);
@@ -131,7 +133,7 @@ const BoutiqueClientPage = () => {
               const isTruncated = hasDataUrl && !cleaned.endsWith('=') && cleaned.length % 4 !== 0;
               const normalizedImage = isTruncated
                 ? ''
-                : (hasDataUrl ? cleaned : (looksLikeBareBase64 ? `data:image/png;base64,${cleaned}` : ''));
+                : (hasDataUrl ? cleaned : (looksLikeBareBase64 ? `data:image/png;base64,${cleaned}` : (cleaned.startsWith('/') ? `${SERVER_BASE}${cleaned}` : '')));
               
               return {
                 ...produit,
@@ -491,7 +493,7 @@ const BoutiqueClientPage = () => {
         statut: 'en_attente'
       };
 
-      const response = await fetch('http://localhost:5000/api/commandes', {
+      const response = await fetch(`${API_BASE}/commandes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

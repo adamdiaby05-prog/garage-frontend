@@ -90,7 +90,8 @@ const BoutiquePage = () => {
     try {
       setLoading(true);
       // Utiliser l'API backend directe
-      const response = await fetch('http://localhost:5000/api/boutique/produits');
+      const API_BASE = process.env.REACT_APP_API_BASE_URL || '/api';
+      const response = await fetch(`${API_BASE}/boutique/produits`);
       const data = await response.json();
       
       if (!response.ok) {

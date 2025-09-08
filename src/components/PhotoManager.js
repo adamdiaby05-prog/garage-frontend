@@ -37,7 +37,8 @@ const PhotoManager = ({ produitId, produitNom, onClose, open }) => {
     
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/boutique/produits/${produitId}/photos`);
+      const API_BASE = process.env.REACT_APP_API_BASE_URL || '/api';
+      const response = await fetch(`${API_BASE}/boutique/produits/${produitId}/photos`);
       if (response.ok) {
         const data = await response.json();
         setPhotos(data);
@@ -74,7 +75,8 @@ const PhotoManager = ({ produitId, produitNom, onClose, open }) => {
         est_principale: photos.length === 0 // Première photo = principale
       };
 
-      const response = await fetch(`http://localhost:5000/api/boutique/produits/${produitId}/photos`, {
+      const API_BASE = process.env.REACT_APP_API_BASE_URL || '/api';
+      const response = await fetch(`${API_BASE}/boutique/produits/${produitId}/photos`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,7 +99,8 @@ const PhotoManager = ({ produitId, produitNom, onClose, open }) => {
   // Supprimer une photo
   const handleDeletePhoto = async (photoId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/boutique/photos/${photoId}`, {
+      const API_BASE = process.env.REACT_APP_API_BASE_URL || '/api';
+      const response = await fetch(`${API_BASE}/boutique/photos/${photoId}`, {
         method: 'DELETE'
       });
 
@@ -114,7 +117,8 @@ const PhotoManager = ({ produitId, produitNom, onClose, open }) => {
   // Définir comme photo principale
   const handleSetMainPhoto = async (photoId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/boutique/photos/${photoId}/principale`, {
+      const API_BASE = process.env.REACT_APP_API_BASE_URL || '/api';
+      const response = await fetch(`${API_BASE}/boutique/photos/${photoId}/principale`, {
         method: 'PUT'
       });
 

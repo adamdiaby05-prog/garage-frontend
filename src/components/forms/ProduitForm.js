@@ -252,12 +252,13 @@ const ProduitForm = ({ open, onClose, onSuccess, produit = null }) => {
       };
 
       console.log('Données à envoyer:', produitData);
-      console.log('URL de l\'API:', 'http://localhost:5000/api/boutique/produits');
+      const API_BASE = process.env.REACT_APP_API_BASE_URL || '/api';
+      console.log('URL de l\'API:', `${API_BASE}/boutique/produits`);
 
       if (produit) {
         // Modification d'un produit existant
         const produitId = produit.id_piece || produit.id;
-        const response = await fetch(`http://localhost:5000/api/boutique/produits/${produitId}`, {
+        const response = await fetch(`${API_BASE}/boutique/produits/${produitId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -270,7 +271,7 @@ const ProduitForm = ({ open, onClose, onSuccess, produit = null }) => {
         }
       } else {
         // Création d'un nouveau produit
-        const response = await fetch('http://localhost:5000/api/boutique/produits', {
+        const response = await fetch(`${API_BASE}/boutique/produits`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
