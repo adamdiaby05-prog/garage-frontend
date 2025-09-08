@@ -14,6 +14,7 @@ const statutColor = (statut) => {
 };
 
 const CommandesPage = () => {
+  const API_BASE = process.env.REACT_APP_API_BASE_URL || '/api';
   const [orders, setOrders] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -23,7 +24,6 @@ const CommandesPage = () => {
     try {
       setLoading(true);
       setError(null);
-      const API_BASE = process.env.REACT_APP_API_BASE_URL || '/api';
       const response = await fetch(`${API_BASE}/commandes`);
       if (!response.ok) {
         throw new Error('Erreur lors du chargement des commandes');
