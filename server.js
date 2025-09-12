@@ -3576,6 +3576,39 @@ app.patch('/api/demandes-prestations/:id/accept', async (req, res) => {
   }
 });
 
+// Obtenir un garage par ID
+app.get('/api/garages/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await pool.execute('SELECT * FROM garages WHERE id = ?', [id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Garage introuvable' });
+    }
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('Erreur récupération garage:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Mettre à jour le statut d'un garage
+app.patch('/api/garages/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { statut } = req.body;
+    
+    if (!statut || !['actif', 'inactif', 'en_attente'].includes(statut)) {
+      return res.status(400).json({ error: 'Statut invalide' });
+    }
+    
+    await pool.execute('UPDATE garages SET statut = ? WHERE id = ?', [statut, id]);
+    res.json({ message: 'Statut du garage mis à jour' });
+  } catch (error) {
+    console.error('Erreur mise à jour garage:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // Lister les demandes pour un garage spécifique
 app.get('/api/garages/:id/demandes', async (req, res) => {
   try {
