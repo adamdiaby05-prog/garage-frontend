@@ -2832,9 +2832,14 @@ app.put('/api/boutique/photos/:photoId/principale', async (req, res) => {
 // Routes pour les commandes de la boutique
 app.post('/api/commandes', async (req, res) => {
   try {
-    const { produit, quantite, client, position } = req.body;
-    
-    // Insérer la commande dans la base de données
+    const { produit, quantite, client, position } = req.body || {};
+
+    const safeProduit = produit || {};
+    const safeClient = client || {};
+    const latitude = (position && typeof position.lat === 'number') ? position.lat : null;
+    const longitude = (position && typeof position.lng === 'number') ? position.lng : null;
+    const qty = Number.isFinite(quantite) ? quantite : 1;
+
     const [result] = await pool.execute(`
       INSERT INTO commandes_boutique (
         id_produit, nom_produit, reference_produit, prix_produit, image_produit,
@@ -2842,24 +2847,24 @@ app.post('/api/commandes', async (req, res) => {
         latitude, longitude, statut, date_commande
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Nouveau', NOW())
     `, [
-      produit.id,
-      produit.nom,
-      produit.reference,
-      produit.prix,
-      produit.image,
-      quantite,
-      client.nom,
-      client.email,
-      client.telephone,
-      client.adresse,
-      position.lat,
-      position.lng
+      safeProduit.id || null,
+      safeProduit.nom || null,
+      safeProduit.reference || null,
+      safeProduit.prix || null,
+      safeProduit.image || null,
+      qty,
+      safeClient.nom || null,
+      (safeClient.email || null),
+      (safeClient.telephone || null),
+      (safeClient.adresse || null),
+      latitude,
+      longitude
     ]);
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       message: 'Commande enregistrée avec succès',
-      id: result.insertId 
+      id: result.insertId
     });
   } catch (error) {
     console.error('Erreur lors de l\'enregistrement de la commande:', error);
