@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -13,1515 +13,1464 @@ import {
   Alert,
   CircularProgress,
   TextField,
+  InputAdornment,
+  Rating,
+  IconButton,
+  Fade,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  InputAdornment,
-  Paper,
-  FormControl,
-  Select,
-  MenuItem,
-  Container,
-  Rating,
-  IconButton,
-  Zoom,
-  Backdrop
+  
 } from '@mui/material';
-import { ShoppingCart, Search, AutoAwesome, MyLocation, DirectionsCar, Close, ZoomIn, LocationOn, GpsFixed, Map } from '@mui/icons-material';
-
-// Données de démonstration
-const demoProducts = [
-  { id: 1, nom: "Filtre à huile premium", description: "Filtre haute performance pour moteur", prix: 29.99, stock: 15, categorie: "filtres", reference: "FIL001", note: 4.8, nombreAvis: 42 },
-  { id: 2, nom: "Plaquettes de frein", description: "Plaquettes céramique longue durée", prix: 89.99, stock: 8, categorie: "freinage", reference: "FREIN001", note: 4.6, nombreAvis: 38 },
-  { id: 3, nom: "Ampoule LED H7", description: "Éclairage LED blanc pur 6000K", prix: 45.99, stock: 25, categorie: "électricité", reference: "LED001", note: 4.9, nombreAvis: 67 },
-  { id: 4, nom: "Joint de culasse", description: "Joint haute résistance thermique", prix: 199.99, stock: 5, categorie: "moteur", reference: "MOT001", note: 4.7, nombreAvis: 23 },
-  { id: 5, nom: "Amortisseur avant", description: "Amortisseur hydraulique sport", prix: 159.99, stock: 12, categorie: "suspension", reference: "SUSP001", note: 4.5, nombreAvis: 31 },
-  { id: 6, nom: "Rétroviseur droit", description: "Rétroviseur électrique dégivrant", prix: 125.99, stock: 7, categorie: "carrosserie", reference: "CAR001", note: 4.3, nombreAvis: 19 },
-  { id: 7, nom: "Huile moteur 5W30", description: "Huile synthétique haute performance", prix: 35.99, stock: 30, categorie: "entretien", reference: "ENT001", note: 4.8, nombreAvis: 89 },
-  { id: 8, nom: "Filtre à air sport", description: "Filtre haute filtration réutilisable", prix: 79.99, stock: 18, categorie: "filtres", reference: "FIL002", note: 4.6, nombreAvis: 44 }
-];
-
-const getImageByCategory = (category) => {
-  const createSVGImage = (color, text) => {
-    const svg = `<svg width="300" height="300" xmlns="http://www.w3.org/2000/svg">
-      <rect width="300" height="300" fill="${color}"/>
-      <text x="150" y="150" font-family="Arial, sans-serif" font-size="24" font-weight="bold" 
-            text-anchor="middle" dominant-baseline="middle" fill="white">${text}</text>
-    </svg>`;
-    return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
-  };
-
-  const images = {
-    'filtres': createSVGImage('#10b981', 'Filtres'),
-    'freinage': createSVGImage('#ef4444', 'Freinage'),
-    'électricité': createSVGImage('#f59e0b', 'Électricité'),
-    'moteur': createSVGImage('#8b5cf6', 'Moteur'),
-    'suspension': createSVGImage('#06b6d4', 'Suspension'),
-    'carrosserie': createSVGImage('#84cc16', 'Carrosserie'),
-    'entretien': createSVGImage('#f97316', 'Entretien')
-  };
-  return images[category] || createSVGImage('#10b981', 'Auto Parts');
-};
+import { 
+  ShoppingCart, 
+  Search, 
+  AutoAwesome, 
+  DirectionsCar, 
+  Star,
+  Verified,
+  Speed,
+  Shield,
+  Bolt,
+  Menu as MenuIcon,
+  Close,
+  FilterList,
+  ZoomIn,
+  ZoomOut
+} from '@mui/icons-material';
+import { boutiqueAPI } from '../services/api';
 
 const BoutiqueClientPage = () => {
-  const API_BASE = process.env.REACT_APP_API_BASE_URL || '/api';
-  const SERVER_BASE = API_BASE.replace(/\/api\/?$/, '');
   const navigate = useNavigate();
-  const [produits, setProduits] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categorieFilter, setCategorieFilter] = useState('all');
-  const [buyDialogOpen, setBuyDialogOpen] = useState(false);
-  const [selectedProduit, setSelectedProduit] = useState(null);
-  const [referenceInput, setReferenceInput] = useState('');
-  const [quantityInput, setQuantityInput] = useState(1);
-
-  // Champs client
-  const [clientNom, setClientNom] = useState('');
-  const [clientEmail, setClientEmail] = useState('');
-  const [clientPhone, setClientPhone] = useState('');
-  const [clientAdresse, setClientAdresse] = useState('');
-  const [position, setPosition] = useState({ lat: 5.345317, lng: -4.024429 });
-  
-  // États pour la géolocalisation et la carte
-  const [currentLocation, setCurrentLocation] = useState(null);
-  const [locationLoading, setLocationLoading] = useState(false);
-  const [addressLoading, setAddressLoading] = useState(false);
-  const [locationError, setLocationError] = useState(null);
-  const [showMap, setShowMap] = useState(false);
-  
-  // États pour le modal d'image
-  const [imageModalOpen, setImageModalOpen] = useState(false);
-  const [selectedImage, setSelectedImage] = useState('');
-  const [selectedProductName, setSelectedProductName] = useState('');
-  
-  // États pour les animations
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [particles, setParticles] = useState([]);
-  const [carAnimations, setCarAnimations] = useState([]);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [floatingElements, setFloatingElements] = useState([]);
-  const containerRef = useRef(null);
-  const particleIdCounter = useRef(0);
-  const carIdCounter = useRef(0);
+  const [hoveredCard, setHoveredCard] = useState(null);
+  const [scrollY, setScrollY] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [sortBy, setSortBy] = useState('name');
+  const [cart, setCart] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewSrc, setPreviewSrc] = useState('');
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [orderOpen, setOrderOpen] = useState(false);
+  const [orderProduct, setOrderProduct] = useState(null);
+  const [orderForm, setOrderForm] = useState({ nom: '', email: '', telephone: '', adresse: '' });
+  const [orderQty, setOrderQty] = useState(1);
+  const [orderSubmitting, setOrderSubmitting] = useState(false);
 
-  // Chargement des produits depuis l'API
+  // Données de démonstration (fallback si API vide)
+  const demoProducts = [
+    { 
+      id: 1, 
+      nom: "Filtre à huile premium", 
+      description: "Filtre haute performance pour moteur avec technologie nano-filtration", 
+      prix: 29.99, 
+      stock: 15, 
+      categorie: "filtres", 
+      reference: "FIL001", 
+      note: 4.8, 
+      nombreAvis: 42,
+      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
+      badge: "Premium"
+    },
+    { 
+      id: 2, 
+      nom: "Plaquettes de frein", 
+      description: "Plaquettes céramique longue durée avec système anti-bruit", 
+      prix: 89.99, 
+      stock: 8, 
+      categorie: "freinage", 
+      reference: "FREIN001", 
+      note: 4.6, 
+      nombreAvis: 38,
+      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
+      badge: "Sport"
+    },
+    { 
+      id: 3, 
+      nom: "Ampoule LED H7", 
+      description: "Éclairage LED blanc pur 6000K avec durée de vie 50 000h", 
+      prix: 45.99, 
+      stock: 25, 
+      categorie: "électricité", 
+      reference: "LED001", 
+      note: 4.9, 
+      nombreAvis: 67,
+      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
+      badge: "LED"
+    },
+    { 
+      id: 4, 
+      nom: "Joint de culasse", 
+      description: "Joint haute résistance thermique pour moteurs haute performance", 
+      prix: 199.99, 
+      stock: 5, 
+      categorie: "moteur", 
+      reference: "MOT001", 
+      note: 4.7, 
+      nombreAvis: 23,
+      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
+      badge: "Pro"
+    },
+    { 
+      id: 5, 
+      nom: "Amortisseur avant", 
+      description: "Amortisseur hydraulique sport avec réglage de dureté", 
+      prix: 159.99, 
+      stock: 12, 
+      categorie: "suspension", 
+      reference: "SUSP001", 
+      note: 4.5, 
+      nombreAvis: 31,
+      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
+      badge: "Sport"
+    },
+    { 
+      id: 6, 
+      nom: "Rétroviseur droit", 
+      description: "Rétroviseur électrique dégivrant avec indicateur de direction", 
+      prix: 125.99, 
+      stock: 7, 
+      categorie: "carrosserie", 
+      reference: "CAR001", 
+      note: 4.3, 
+      nombreAvis: 19,
+      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
+      badge: "Smart"
+    },
+    { 
+      id: 7, 
+      nom: "Huile moteur 5W30", 
+      description: "Huile synthétique haute performance pour tous types de moteurs", 
+      prix: 35.99, 
+      stock: 30, 
+      categorie: "entretien", 
+      reference: "ENT001", 
+      note: 4.8, 
+      nombreAvis: 89,
+      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
+      badge: "Synthétique"
+    },
+    { 
+      id: 8, 
+      nom: "Filtre à air sport", 
+      description: "Filtre haute filtration réutilisable avec gain de puissance", 
+      prix: 79.99, 
+      stock: 18, 
+      categorie: "filtres", 
+      reference: "FIL002", 
+      note: 4.6, 
+      nombreAvis: 44,
+      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
+      badge: "Performance"
+    }
+  ];
+
+  const categories = [
+    { value: 'all', label: 'Tous les produits', icon: <DirectionsCar /> },
+    { value: 'filtres', label: 'Filtres', icon: <FilterList /> },
+    { value: 'freinage', label: 'Freinage', icon: <Shield /> },
+    { value: 'électricité', label: 'Électricité', icon: <Bolt /> },
+    { value: 'moteur', label: 'Moteur', icon: <AutoAwesome /> },
+    { value: 'suspension', label: 'Suspension', icon: <Speed /> },
+    { value: 'carrosserie', label: 'Carrosserie', icon: <Verified /> },
+    { value: 'entretien', label: 'Entretien', icon: <Star /> }
+  ];
+
+  const [products, setProducts] = useState([]);
+
+  // Charger les produits depuis l'API boutique (identique à BoutiquePage)
   useEffect(() => {
-    const loadProducts = async () => {
+    const fetchProduits = async () => {
       try {
         setLoading(true);
-        
-        // Charger depuis l'API backend
+        setError('');
+        const API_BASE = process.env.REACT_APP_API_BASE_URL || '/api';
         const response = await fetch(`${API_BASE}/boutique/produits`);
-        if (response.ok) {
           const data = await response.json();
-          console.log('Produits reçus de la base:', data);
-          
-          // Nettoyer et améliorer les produits
-          const cleanData = data
-            .filter(produit => produit.nom && produit.nom.trim() !== '')
-            .map(produit => {
-              // Normaliser l'image
+        if (!response.ok) {
+          throw new Error(data.error || 'Erreur lors du chargement des produits');
+        }
+        const cleanData = (Array.isArray(data) ? data : [])
+          .filter(produit => produit.nom && produit.nom !== 'adaad')
+          .map((produit, idx) => {
               const raw = typeof produit.image === 'string' ? produit.image : '';
               const trimmed = raw.trim();
               const cleaned = trimmed.replace(/\s+/g, '');
               const hasDataUrl = cleaned.startsWith('data:image/');
               const looksLikeBareBase64 = !!cleaned && !cleaned.startsWith('data:') && cleaned.length > 100 && /^[A-Za-z0-9+/=]+$/.test(cleaned.substring(0, 120));
-              
               const isTruncated = hasDataUrl && !cleaned.endsWith('=') && cleaned.length % 4 !== 0;
-              const normalizedImage = isTruncated
-                ? ''
-                : (hasDataUrl ? cleaned : (looksLikeBareBase64 ? `data:image/png;base64,${cleaned}` : (cleaned.startsWith('/') ? `${SERVER_BASE}${cleaned}` : '')));
-              
+            const normalizedImage = isTruncated ? '' : (hasDataUrl ? cleaned : (looksLikeBareBase64 ? `data:image/png;base64,${cleaned}` : ''));
               return {
                 ...produit,
-                image: normalizedImage || getImageByCategory(produit.categorie || 'default'),
-                note: parseFloat(produit.note) || 4.0,
-                nombreAvis: parseInt(produit.nombreAvis) || 0,
-                prix: parseFloat(produit.prix) || 0,
-                stock: parseInt(produit.stock) || 0
+              id: produit.id ?? (produit.id_produit ?? idx + 1),
+              image: normalizedImage || getDefaultImage(produit.categorie, produit.nom)
               };
             });
-          
-          console.log('Produits nettoyés:', cleanData);
-          setProduits(cleanData);
-        } else {
-          throw new Error('Erreur API');
-        }
-        setError(null);
-      } catch (err) {
-        console.error('Erreur lors du chargement des produits:', err);
-        setError('Impossible de charger les produits depuis la base de données');
-        // En cas d'erreur, utiliser les données de démonstration
-        setProduits(demoProducts);
+        setProducts(cleanData.length > 0 ? cleanData : demoProducts);
+      } catch (e) {
+        console.error('Erreur chargement produits boutique-client:', e);
+        setError('Erreur lors du chargement des produits');
+        setProducts(demoProducts);
       } finally {
         setLoading(false);
       }
     };
-    loadProducts();
+    fetchProduits();
   }, []);
 
-  // Animation des éléments flottants
+  const getDefaultImage = (categorie, nom) => {
+    const colors = {
+      'filtres': '#10b981',
+      'freinage': '#ef4444',
+      'électricité': '#f59e0b',
+      'moteur': '#8b5cf6',
+      'suspension': '#06b6d4',
+      'carrosserie': '#84cc16',
+      'entretien': '#f97316',
+      'test': '#6b7280'
+    };
+    const color = colors[(categorie || '').toLowerCase()] || '#6b7280';
+    const initial = (categorie || nom || 'P').charAt(0).toUpperCase();
+    const svg = `<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg"><rect width="60" height="60" fill="${color}" rx="8"/><text x="30" y="35" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="white">${initial}</text></svg>`;
+    return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
+  };
+
+  // Badges 3D avec animations
+  const badges3D = [
+    { icon: <Verified />, title: 'Garantie', subtitle: '2 ans', color: '#00ff88', glow: 'rgba(0, 255, 136, 0.5)', rotation: '12deg' },
+    { icon: <Speed />, title: 'Livraison', subtitle: '24h', color: '#00ff88', glow: 'rgba(0, 255, 136, 0.5)', rotation: '-8deg' },
+    { icon: <Shield />, title: 'Sécurisé', subtitle: 'SSL', color: '#00ff88', glow: 'rgba(0, 255, 136, 0.5)', rotation: '15deg' }
+  ];
+
+  // Initialisation des particules
   useEffect(() => {
-    const generateFloatingElements = () => {
-      const elements = [];
-      for (let i = 0; i < 20; i++) {
-        elements.push({
-          id: `float-${i}`,
+    const initialParticles = Array.from({ length: 30 }, (_, i) => ({
+      id: i,
           x: Math.random() * window.innerWidth,
           y: Math.random() * window.innerHeight,
-        size: Math.random() * 4 + 2,
-        speed: Math.random() * 2 + 1,
-          opacity: Math.random() * 0.5 + 0.1
-      });
-    }
-      setFloatingElements(elements);
+      size: Math.random() * 3 + 1,
+      speedX: (Math.random() - 0.5) * 2,
+      speedY: (Math.random() - 0.5) * 2,
+      opacity: Math.random() * 0.5 + 0.2,
+      color: ['#00ff88', '#00cc6a', '#00aa55'][Math.floor(Math.random() * 3)]
+    }));
+    setParticles(initialParticles);
+
+    const animateParticles = () => {
+      setParticles(prev => prev.map(p => {
+        const nextX = p.x + p.speedX;
+        const nextY = p.y + p.speedY;
+        return {
+          ...p,
+          x: nextX > window.innerWidth ? 0 : nextX < 0 ? window.innerWidth : nextX,
+          y: nextY > window.innerHeight ? 0 : nextY < 0 ? window.innerHeight : nextY
+        };
+      }));
     };
 
-    generateFloatingElements();
-    const interval = setInterval(() => {
-      setFloatingElements(prev => prev.map(el => ({
-        ...el,
-        y: el.y > window.innerHeight ? -10 : el.y + el.speed,
-        x: el.x + Math.sin(Date.now() * 0.001 + el.id.length) * 0.5
-      })));
-    }, 50);
-
+    const interval = setInterval(animateParticles, 50);
     return () => clearInterval(interval);
   }, []);
 
-  // Suivi de la souris pour les particules
+  // Mouse tracking
   useEffect(() => {
     const handleMouseMove = (e) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
-      
-      // Particules suivant la souris
-      if (Math.random() < 0.3) {
-        const newParticle = {
-          id: `trail-${++particleIdCounter.current}-${Date.now()}`,
-          x: e.clientX + (Math.random() - 0.5) * 20,
-          y: e.clientY + (Math.random() - 0.5) * 20,
-          vx: (Math.random() - 0.5) * 2,
-          vy: (Math.random() - 0.5) * 2,
-          life: 60,
-          type: 'trail'
-        };
-        setParticles(prev => [...prev.slice(-30), newParticle]);
-      }
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
     };
 
     window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
-
-  // Nettoyage des particules et voitures
-  useEffect(() => {
-    const cleanup = setInterval(() => {
-      setParticles(prev => prev.filter(p => p.life > 0).map(p => ({ ...p, life: p.life - 1 })));
-      setCarAnimations(prev => prev.filter(car => car.life > 0).map(car => ({ 
-        ...car, 
-        life: car.life - 1,
-        x: car.x + car.vx,
-        y: car.y + car.vy,
-        rotation: car.rotation + car.rotationSpeed
-      })));
-    }, 16);
-
-    return () => clearInterval(cleanup);
-  }, []);
-
-  const getProductImage = (produit) => {
-    if (!produit) return getImageByCategory('default');
-    
-    // Si l'image de la base de données existe et n'est pas null, l'utiliser
-    if (produit.image && produit.image !== null && produit.image !== 'null') {
-      return produit.image;
-    }
-    
-    // Sinon, utiliser l'image par catégorie
-    if (produit.categorie && typeof produit.categorie === 'string') {
-      return getImageByCategory(produit.categorie);
-    }
-    
-    return getImageByCategory('default');
-  };
-
-  const filteredProduits = useMemo(() => {
-    return produits.filter(produit => {
-      const matchesSearch = produit.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           produit.description.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = categorieFilter === 'all' || 
-                             produit.categorie.toLowerCase() === categorieFilter.toLowerCase();
-      return matchesSearch && matchesCategory;
-    });
-  }, [produits, searchTerm, categorieFilter]);
-
-  const handleImageClick = (produit) => {
-    setSelectedImage(getProductImage(produit));
-    setSelectedProductName(produit.nom);
-    setImageModalOpen(true);
-  };
-
-  const handleCloseImageModal = () => {
-    setImageModalOpen(false);
-    setSelectedImage('');
-    setSelectedProductName('');
-  };
-
-  // Fonction pour obtenir la géolocalisation actuelle avec adresse
-  const getCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setLocationError('La géolocalisation n\'est pas supportée par ce navigateur');
-      return;
-    }
-
-    setLocationLoading(true);
-    setLocationError(null);
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        setCurrentLocation({ lat: latitude, lng: longitude });
-        setPosition({ lat: latitude, lng: longitude });
-        setShowMap(true);
-        
-        // Obtenir l'adresse à partir des coordonnées (géocodage inverse)
-        setAddressLoading(true);
-        try {
-          const address = await getAddressFromCoordinates(latitude, longitude);
-          if (address) {
-            setClientAdresse(address);
-          }
-        } catch (error) {
-          console.warn('Impossible d\'obtenir l\'adresse:', error);
-        } finally {
-          setAddressLoading(false);
-        }
-        
-        setLocationLoading(false);
-      },
-      (error) => {
-        console.error('Erreur géolocalisation:', error);
-        setLocationError('Impossible d\'obtenir votre position. Vérifiez les permissions.');
-        setLocationLoading(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 30000
-      }
-    );
-  };
-
-  // Fonction pour obtenir l'adresse à partir des coordonnées (géocodage inverse)
-  const getAddressFromCoordinates = async (lat, lng) => {
-    try {
-      // Utiliser l'API de géocodage inverse gratuite de Nominatim (OpenStreetMap)
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-        {
-          headers: {
-            'User-Agent': 'AutoParts-Client/1.0'
-          }
-        }
-      );
-      
-      if (!response.ok) {
-        throw new Error('Erreur de géocodage');
-      }
-      
-      const data = await response.json();
-      
-      if (data && data.display_name) {
-        // Construire une adresse formatée avec focus sur quartier et rue
-        const address = data.address || {};
-        let formattedAddress = '';
-        let streetInfo = '';
-        let neighborhoodInfo = '';
-        
-        // Extraire les informations de rue
-        if (address.house_number && address.road) {
-          streetInfo = `${address.house_number} ${address.road}`;
-        } else if (address.road) {
-          streetInfo = address.road;
-        } else if (address.pedestrian) {
-          streetInfo = address.pedestrian;
-        } else if (address.footway) {
-          streetInfo = address.footway;
-        }
-        
-        // Extraire les informations de quartier/neighbourhood (priorité aux plus spécifiques)
-        if (address.neighbourhood) {
-          neighborhoodInfo = address.neighbourhood;
-        } else if (address.quarter) {
-          neighborhoodInfo = address.quarter;
-        } else if (address.suburb) {
-          neighborhoodInfo = address.suburb;
-        } else if (address.city_district) {
-          neighborhoodInfo = address.city_district;
-        } else if (address.district) {
-          neighborhoodInfo = address.district;
-        } else if (address.ward) {
-          neighborhoodInfo = address.ward;
-        } else if (address.hamlet) {
-          neighborhoodInfo = address.hamlet;
-        }
-        
-        // Construire l'adresse de manière structurée
-        if (streetInfo) {
-          formattedAddress += streetInfo;
-        }
-        
-        if (neighborhoodInfo) {
-          formattedAddress += formattedAddress ? `, ${neighborhoodInfo}` : neighborhoodInfo;
-        }
-        
-        // Ajouter la ville/commune (priorité aux plus spécifiques)
-        let cityInfo = '';
-        if (address.city) {
-          cityInfo = address.city;
-        } else if (address.town) {
-          cityInfo = address.town;
-        } else if (address.municipality) {
-          cityInfo = address.municipality;
-        } else if (address.village) {
-          cityInfo = address.village;
-        } else if (address.locality) {
-          cityInfo = address.locality;
-        } else if (address.county) {
-          cityInfo = address.county;
-        }
-        
-        if (cityInfo) {
-          formattedAddress += formattedAddress ? `, ${cityInfo}` : cityInfo;
-        }
-        
-        // Ajouter le code postal
-        if (address.postcode) {
-          formattedAddress += formattedAddress ? `, ${address.postcode}` : address.postcode;
-        }
-        
-        // Ajouter le pays
-        if (address.country) {
-          formattedAddress += formattedAddress ? `, ${address.country}` : address.country;
-        }
-        
-        // Si pas d'adresse structurée, utiliser display_name
-        if (!formattedAddress) {
-          formattedAddress = data.display_name;
-        }
-        
-        return formattedAddress;
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('Erreur géocodage inverse:', error);
-      return null;
-    }
-  };
-
-  // Fonction pour ouvrir dans Google Maps
-  const openInGoogleMaps = () => {
-    if (currentLocation) {
-      const { lat, lng } = currentLocation;
-      const url = `https://www.google.com/maps?q=${lat},${lng}`;
-      window.open(url, '_blank');
-    }
-  };
-
-  const handleOpenBuy = (produit) => {
-    setSelectedProduit(produit);
-    setReferenceInput(produit.reference || '');
-    setQuantityInput(1);
-    setBuyDialogOpen(true);
-    
-    // Animation de voiture qui démarre
-    const startCar = {
-      id: `car-${++carIdCounter.current}`,
-      x: mousePos.x,
-      y: mousePos.y,
-      vx: (Math.random() - 0.5) * 8 + 5,
-      vy: (Math.random() - 0.5) * 4,
-      life: 120,
-      rotation: 0,
-      rotationSpeed: 3,
-      size: 1
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('scroll', handleScroll);
     };
-    setCarAnimations(prev => [...prev, startCar]);
+  }, []);
 
-    // Explosion de particules
-    const explosionParticles = Array.from({ length: 15 }, (_, i) => ({
-      id: `explosion-${++particleIdCounter.current}-${Date.now()}-${i}`,
-      x: mousePos.x,
-      y: mousePos.y,
-      vx: (Math.random() - 0.5) * 12,
-      vy: (Math.random() - 0.5) * 12,
-      life: 100,
-      type: 'explosion',
-      color: `hsl(${120 + Math.random() * 60}, 80%, 60%)`
-    }));
-    setParticles(prev => [...prev, ...explosionParticles]);
+  // Filtrer et trier les produits
+  const filteredProducts = (Array.isArray(products) ? products : []).filter(product => {
+    const name = (product?.nom ?? '').toString();
+    const description = (product?.description ?? '').toString();
+    const category = (product?.categorie ?? '').toString();
+    const q = (searchTerm ?? '').toString().toLowerCase();
+    const matchesSearch = name.toLowerCase().includes(q) || description.toLowerCase().includes(q);
+    const matchesCategory = selectedCategory === 'all' || category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  }).sort((a, b) => {
+    const aName = (a?.nom ?? '').toString();
+    const bName = (b?.nom ?? '').toString();
+    const aPrice = Number(a?.prix ?? 0);
+    const bPrice = Number(b?.prix ?? 0);
+    const aRating = Number(a?.note ?? 0);
+    const bRating = Number(b?.note ?? 0);
+    switch (sortBy) {
+      case 'price-asc': return aPrice - bPrice;
+      case 'price-desc': return bPrice - aPrice;
+      case 'rating': return bRating - aRating;
+      default: return aName.localeCompare(bName);
+    }
+  });
+
+  const openOrderModal = (product) => {
+    setOrderProduct(product);
+    setOrderQty(1);
+    setOrderForm({ nom: '', email: '', telephone: '', adresse: '' });
+    setOrderOpen(true);
   };
 
-  const handleConfirmBuy = async () => {
+  const addToCart = (product) => {
+    openOrderModal(product);
+  };
+
+  const submitOrder = async () => {
     try {
-      if (!clientNom || !clientEmail || !clientPhone) {
-        setSnackbar({ open: true, severity: 'error', message: 'Veuillez remplir les informations obligatoires.' });
-        return;
-      }
-      
-      // Enregistrer la commande via l'API backend
-      const orderData = {
+      setOrderSubmitting(true);
+      // Tentative de géolocalisation
+      const getPosition = () => new Promise((resolve) => {
+        if (!navigator.geolocation) return resolve(null);
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          () => resolve(null),
+          { enableHighAccuracy: true, timeout: 5000 }
+        );
+      });
+      const position = (await getPosition()) || { lat: null, lng: null };
+      const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+      const payload = {
         produit: {
-          id: selectedProduit?.id,
-          nom: selectedProduit?.nom,
-          reference: selectedProduit?.reference,
-          prix: selectedProduit?.prix,
-          image: getProductImage(selectedProduit)
+          id: orderProduct.id,
+          nom: orderProduct.nom,
+          reference: orderProduct.reference,
+          prix: orderProduct.prix,
+          image: orderProduct.image,
         },
-        quantite: quantityInput,
-        client: {
-          nom: clientNom,
-          email: clientEmail,
-          telephone: clientPhone,
-          adresse: clientAdresse || 'Adresse non spécifiée'
-        },
-        position: currentLocation ? { ...currentLocation } : { ...position },
-        statut: 'en_attente'
+        quantite: Number(orderQty) || 1,
+        client: { ...orderForm },
+        position: { lat: position.lat, lng: position.lng },
       };
-
-      const response = await fetch(`${API_BASE}/commandes`, {
+      const res = await fetch(`${API_BASE}/commandes`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de l\'enregistrement');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Erreur lors de l\'envoi de la commande');
       }
-
-      const result = await response.json();
-      
-      setBuyDialogOpen(false);
-      
-      // Animation de succès avec voitures
-      const successCars = Array.from({ length: 5 }, (_, i) => ({
-        id: `success-car-${++carIdCounter.current}-${i}`,
-        x: window.innerWidth / 2 + (i - 2) * 100,
-        y: window.innerHeight - 100,
-        vx: (Math.random() - 0.5) * 4,
-        vy: -Math.random() * 3 - 2,
-        life: 180,
-        rotation: 0,
-        rotationSpeed: 2,
-        size: 1.5
-      }));
-      setCarAnimations(prev => [...prev, ...successCars]);
-      
-      setSnackbar({ 
-        open: true, 
-        severity: 'success', 
-        message: `🚗💨 Commande confirmée ! ${selectedProduit?.nom} x${quantityInput} - Livraison en route !` 
-      });
-    } catch (err) {
-      console.error('Erreur commande:', err);
-      setSnackbar({ open: true, severity: 'error', message: 'Erreur lors de la commande' });
+      setSnackbar({ open: true, message: 'Commande envoyée avec succès ✅', severity: 'success' });
+      setOrderOpen(false);
+    } catch (e) {
+      console.error(e);
+      setSnackbar({ open: true, message: e.message || 'Erreur de commande', severity: 'error' });
+    } finally {
+      setOrderSubmitting(false);
     }
   };
 
-  if (loading) {
-    return (
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh',
-        background: 'radial-gradient(ellipse at top, #1a2332 0%, #0f1419 100%)',
-        position: 'relative'
-      }}>
-        <Box sx={{ textAlign: 'center' }}>
-          <DirectionsCar sx={{ fontSize: 80, color: '#10b981', mb: 2, animation: 'drive 2s ease-in-out infinite' }} />
-          <CircularProgress size={60} sx={{ color: '#10b981' }} />
-          <Typography sx={{ color: 'white', mt: 2, fontSize: '1.2rem' }}>
-            Démarrage du moteur...
-          </Typography>
-        </Box>
-      </Box>
-    );
-  }
+  const openPreview = (src) => {
+    setPreviewSrc(src);
+    setIsZoomed(false);
+    setPreviewOpen(true);
+  };
 
-  if (error) {
-    return (
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh',
-        background: 'radial-gradient(ellipse at top, #1a2332 0%, #0f1419 100%)'
-      }}>
-        <Alert severity="error" sx={{ fontSize: '1.2rem', background: 'rgba(239, 68, 68, 0.1)' }}>
-          {error}
-        </Alert>
-      </Box>
-    );
-  }
+  const closePreview = () => {
+    setPreviewOpen(false);
+    setTimeout(() => setPreviewSrc(''), 200);
+  };
+
+  const getBadgeColor = (badge) => {
+    const colors = {
+      'Premium': '#00ff88',
+      'Sport': '#ff6b6b',
+      'LED': '#4ecdc4',
+      'Pro': '#45b7d1',
+      'Smart': '#96ceb4',
+      'Synthétique': '#feca57',
+      'Performance': '#ff9ff3'
+    };
+    return colors[badge] || '#00ff88';
+  };
 
   return (
-    <Box 
-      ref={containerRef}
-      sx={{ 
-        minHeight: '100vh', 
-        background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)',
-        position: 'relative', 
-        overflow: 'hidden' 
-      }}
-    >
-      {/* Éléments flottants d'arrière-plan */}
-      {floatingElements.map(element => (
-        <Box
-          key={element.id}
-          sx={{
-            position: 'fixed',
-            left: element.x,
-            top: element.y,
-            width: element.size,
-            height: element.size,
-            background: `radial-gradient(circle, rgba(16, 185, 129, ${element.opacity}) 0%, transparent 70%)`,
-            borderRadius: '50%',
-            pointerEvents: 'none',
-            zIndex: 1
-          }}
-        />
-      ))}
-
-      {/* Particules */}
+    <div className="boutique-container">
+      {/* Particules flottantes */}
       {particles.map(particle => (
-        <Box
-          key={particle.id}
-          sx={{
-            position: 'fixed',
-            left: particle.x,
-            top: particle.y,
-            width: particle.type === 'explosion' ? 6 : 3,
-            height: particle.type === 'explosion' ? 6 : 3,
-            background: particle.color || 'rgba(16, 185, 129, 0.8)',
-            borderRadius: '50%',
-            pointerEvents: 'none',
-            zIndex: 1000,
-            animation: particle.type === 'explosion' ? 'explode 2s ease-out forwards' : 'sparkle 1s ease-out forwards',
-            boxShadow: particle.type === 'explosion' ? `0 0 10px ${particle.color || '#10b981'}` : 'none'
-          }}
+        <div 
+          key={particle.id} 
+          className="particle" 
+          style={{ 
+            left: particle.x, 
+            top: particle.y, 
+            width: particle.size, 
+            height: particle.size, 
+            backgroundColor: particle.color, 
+            opacity: particle.opacity, 
+            boxShadow: `0 0 ${particle.size * 4}px ${particle.color}` 
+          }} 
         />
       ))}
 
-      {/* Animations de voitures */}
-      {carAnimations.map(car => (
-        <Box
-          key={car.id}
-          sx={{
-            position: 'fixed',
-            left: car.x,
-            top: car.y,
-            transform: `rotate(${car.rotation}deg) scale(${car.size})`,
-            pointerEvents: 'none',
-            zIndex: 999,
-            transition: 'all 0.1s ease-out'
-          }}
-        >
-          <DirectionsCar sx={{ 
-            fontSize: 32, 
-            color: '#10b981', 
-            filter: 'drop-shadow(0 0 10px rgba(16, 185, 129, 0.8))'
-          }} />
-        </Box>
-      ))}
+      {/* Effet de cursor glow */}
+      <div 
+        className="cursor-glow" 
+        style={{ 
+          left: mousePosition.x - 150, 
+          top: mousePosition.y - 150, 
+        }} 
+      />
 
-      <Container maxWidth="xl" sx={{ py: 4, position: 'relative', zIndex: 2 }}>
-        {/* En-tête style Amazon */}
-        <Box sx={{ 
-          textAlign: 'center', 
-          mb: 6,
-          p: 6,
-          borderRadius: 3,
-          background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%)',
-          border: '2px solid #10b981',
-          boxShadow: '0 20px 40px rgba(16, 185, 129, 0.2), inset 0 1px 0 rgba(255,255,255,0.1)',
-          animation: 'slideInDown 1s ease-out',
-          position: 'relative',
-          overflow: 'hidden',
-          '&:hover': {
-            transform: 'translateY(-8px)',
-            boxShadow: '0 30px 60px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)'
-          },
-          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: '-100%',
-            width: '100%',
-            height: '100%',
-            background: 'linear-gradient(90deg, transparent, rgba(16,185,129,0.1), transparent)',
-            animation: 'shimmer 3s infinite'
-          }
-        }}>
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 2 }}>
-            <DirectionsCar sx={{ 
-              fontSize: 48, 
-              color: '#10b981', 
-              mr: 2, 
-              animation: 'bounce 2s infinite'
-            }} />
-          <Typography 
-            variant="h2" 
-            onClick={() => navigate('/')}
-            sx={{ 
-              color: '#ffffff', 
-              fontWeight: '900', 
-              textShadow: '0 0 20px rgba(16, 185, 129, 0.8), 0 0 40px rgba(16, 185, 129, 0.4), 2px 2px 8px rgba(0,0,0,0.8)', 
-              fontSize: { xs: '2.5rem', md: '4rem' },
-              letterSpacing: '-0.02em',
-              background: 'linear-gradient(135deg, #ffffff 0%, #10b981 50%, #ffffff 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              animation: 'textGlow 2s ease-in-out infinite alternate',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              '&:hover': {
-                transform: 'scale(1.05)',
-                textShadow: '0 0 30px rgba(16, 185, 129, 1), 0 0 60px rgba(16, 185, 129, 0.6), 2px 2px 8px rgba(0,0,0,0.8)',
-                filter: 'brightness(1.2)'
-              }
-            }}
-          >
-              AutoParts Elite
-          </Typography>
-            <DirectionsCar sx={{ 
-              fontSize: 48, 
-              color: '#10b981', 
-              ml: 2, 
-              animation: 'bounce 2s infinite 0.5s'
-            }} />
-          </Box>
-          
-          <Typography variant="h6" sx={{ 
-            color: '#10b981', 
-            mb: 3,
-            fontWeight: 600,
-            fontSize: '1.3rem',
-            animation: 'fadeIn 1.5s ease-out',
-            textShadow: '0 0 10px rgba(16, 185, 129, 0.5)'
-          }}>
-            🏎️ Pièces automobiles premium • ⚡ Livraison express • 🛡️ Garantie totale
-          </Typography>
-          
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            gap: 3,
-            flexWrap: 'wrap'
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <AutoAwesome sx={{ color: '#34d399', animation: 'pulse 2s infinite' }} />
-              <Typography variant="body1" sx={{ color: 'rgba(209,250,229,0.85)' }}>
-                Livraison 24H
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <AutoAwesome sx={{ color: '#34d399', animation: 'pulse 2s infinite 0.5s' }} />
-              <Typography variant="body1" sx={{ color: 'rgba(209,250,229,0.85)' }}>
-                Installation Pro
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <AutoAwesome sx={{ color: '#34d399', animation: 'pulse 2s infinite 1s' }} />
-              <Typography variant="body1" sx={{ color: 'rgba(209,250,229,0.85)' }}>
-                Support 24/7
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
+      {/* Header avec animation */}
+      <header className={`header ${scrollY > 50 ? 'scrolled' : ''}`}>
+        <div className="container">
+          <div className="header-content">
+            <div className="logo-section" onClick={() => navigate('/')}>
+              <div className="logo-icon">
+                <div className="logo-inner">
+                  <ShoppingCart className="logo-car" />
+                </div>
+              </div>
+              <div className="logo-text">
+                <h1>AutoGenius</h1>
+                <span>Boutique Premium</span>
+              </div>
+            </div>
+            
+            <nav className="desktop-nav">
+              {['Accueil', 'Services', 'À propos', 'Contact'].map(item => (
+                <button key={item} className="nav-link" onClick={() => console.log(`Navigate to ${item}`)}>{item}</button>
+              ))}
+            </nav>
+            
+            <button 
+              className="mobile-menu-btn" 
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? <Close /> : <MenuIcon />}
+            </button>
+          </div>
+        </div>
 
-        {/* Barre de recherche style Amazon */}
-        <Paper sx={{ 
-          p: 4, 
-          mb: 6, 
-          borderRadius: 2, 
-          background: 'linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%)', 
-          border: '2px solid #10b981', 
-          boxShadow: '0 15px 35px rgba(16, 185, 129, 0.15), inset 0 1px 0 rgba(255,255,255,0.1)',
-          animation: 'slideInLeft 1s ease-out 0.2s both',
-          position: 'relative',
-          '&:hover': {
-            transform: 'translateY(-5px)',
-            boxShadow: '0 25px 50px rgba(16, 185, 129, 0.25), inset 0 1px 0 rgba(255,255,255,0.2)'
-          },
-          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
-        }}>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            <TextField
-              placeholder="🔍 Rechercher votre pièce auto..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search sx={{ color: '#10b981', animation: 'rotate 4s linear infinite' }} />
-                  </InputAdornment>
-                ),
-                sx: {
-                  color: 'white',
-                  '& .MuiOutlinedInput-root': {
-                    color: 'white',
-                    backgroundColor: 'rgba(0,0,0,0.3)',
-                    borderRadius: 2,
-                    '& fieldset': { 
-                      borderColor: 'rgba(16,185,129,0.6)',
-                      borderWidth: 2
-                    },
-                    '&:hover fieldset': { 
-                      borderColor: '#10b981',
-                      boxShadow: '0 0 15px rgba(16,185,129,0.3)'
-                    },
-                    '&.Mui-focused fieldset': { 
-                      borderColor: '#10b981', 
-                      boxShadow: '0 0 20px rgba(16,185,129,0.5)',
-                      borderWidth: 2
-                    }
-                  },
-                  '& .MuiInputBase-input::placeholder': { 
-                    color: 'rgba(16,185,129,0.7)',
-                    fontWeight: 500
-                  }
-                }
-              }}
-              sx={{ flex: 1, minWidth: 256 }}
-            />
-            <FormControl sx={{ minWidth: 180 }}>
-              <Select
-                value={categorieFilter}
-                onChange={(e) => setCategorieFilter(e.target.value)}
-                sx={{
-                  color: 'white',
-                  '& .MuiOutlinedInput-root': {
-                    color: 'white',
-                    backgroundColor: 'rgba(0,0,0,0.3)',
-                    borderRadius: 2,
-                    '& fieldset': { 
-                      borderColor: 'rgba(16,185,129,0.6)',
-                      borderWidth: 2
-                    },
-                    '&:hover fieldset': { 
-                      borderColor: '#10b981',
-                      boxShadow: '0 0 15px rgba(16,185,129,0.3)'
-                    },
-                    '&.Mui-focused fieldset': { 
-                      borderColor: '#10b981',
-                      boxShadow: '0 0 20px rgba(16,185,129,0.5)',
-                      borderWidth: 2
-                    }
-                  },
-                  '& .MuiSvgIcon-root': { color: '#10b981' }
+        {/* Menu mobile */}
+        {isMenuOpen && (
+          <div className="mobile-menu">
+            {['Accueil', 'Services', 'À propos', 'Contact'].map(item => (
+              <button key={item} className="mobile-nav-link" onClick={() => console.log(`Navigate to ${item}`)}>{item}</button>
+            ))}
+          </div>
+        )}
+      </header>
+
+      {/* Section principale */}
+      <main className="main-section">
+        <div className="container">
+          {/* Hero section */}
+          <div className="hero-section">
+            <div className="hero-content">
+              {/* Badges 3D flottants */}
+              <div className="badges-container">
+                {badges3D.map((badge, index) => (
+                  <div 
+                    key={index}
+                    className="badge-3d"
+                    style={{
+                      transform: `rotate(${badge.rotation}) translateY(${Math.sin(Date.now() / 1000 + index) * 10}px)`,
+                      boxShadow: `0 20px 40px ${badge.glow}, inset 0 0 20px rgba(255,255,255,0.1)`
+                    }}
+                  >
+                    <div className="badge-icon" style={{ color: badge.color }}>
+                      {badge.icon}
+                    </div>
+                    <div className="badge-text">
+                      <div className="badge-title">{badge.title}</div>
+                      <div className="badge-subtitle">{badge.subtitle}</div>
+                    </div>
+                    <div className="badge-glow" style={{ background: badge.glow }} />
+                  </div>
+                ))}
+              </div>
+
+              <div className="hero-text">
+                <div className="welcome-badge">
+                  <Star className="star-icon" />
+                  <span>Boutique Premium AutoGenius</span>
+                </div>
+                
+                <h1 className="hero-title">
+                  <span className="title-line">Pièces & Accessoires</span>
+                  <span className="title-line neon">de Qualité Premium</span>
+                </h1>
+                
+                <p className="hero-description">
+                  Découvrez notre sélection exclusive de 
+                  <span className="highlight"> pièces automobiles premium </span> 
+                  et d'accessoires 
+                  <span className="highlight"> haute performance</span>.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Filtres et recherche */}
+          <div className="filters-section">
+            <div className="filters-container">
+              <TextField
+                fullWidth
+                placeholder="Rechercher un produit..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search style={{ color: '#00ff88' }} />
+                    </InputAdornment>
+                  ),
                 }}
-              >
-                <MenuItem value="all">🌟 Toutes catégories</MenuItem>
-                <MenuItem value="filtres">🔧 Filtres</MenuItem>
-                <MenuItem value="freinage">🛞 Freinage</MenuItem>
-                <MenuItem value="électricité">💡 Électricité</MenuItem>
-                <MenuItem value="moteur">⚙️ Moteur</MenuItem>
-                <MenuItem value="suspension">🔩 Suspension</MenuItem>
-                <MenuItem value="carrosserie">🚗 Carrosserie</MenuItem>
-                <MenuItem value="entretien">🛢️ Entretien</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-        </Paper>
-
-        {/* Grille des produits avec animations */}
-        <Grid container spacing={4}>
-          {filteredProduits.map((produit, index) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={produit.id}>
-              <Card sx={{ 
-                position: 'relative',
-                background: 'linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%)',
-                borderRadius: 3,
-                border: '2px solid #10b981',
-                boxShadow: '0 15px 35px rgba(16, 185, 129, 0.15), inset 0 1px 0 rgba(255,255,255,0.1)',
-                overflow: 'hidden',
-                animation: `slideInUp 0.8s ease-out ${index * 0.1}s both`,
-                '&:hover': {
-                  transform: 'translateY(-12px) scale(1.03)',
-                  boxShadow: '0 25px 50px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
-                  '& .product-image': {
-                    transform: 'scale(1.15)'
-                  },
-                  '& .buy-button': {
-                    transform: 'scale(1.08)',
-                    boxShadow: '0 20px 40px rgba(16, 185, 129, 0.5)'
-                  }
-                },
-                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute', 
-                  inset: 0, 
-                  background: 'linear-gradient(90deg, transparent, rgba(16,185,129,0.1), transparent)',
-                  transform: 'translateX(-100%)',
-                  transition: 'transform 0.8s ease'
-                },
-                '&:hover::before': {
-                  transform: 'translateX(100%)'
-                }
-              }}>
-                <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                      <Box sx={{ position: 'relative' }}>
-                      <Box
-                        component="img"
-                          src={getProductImage(produit)} 
-                        alt={produit.nom}
-                          className="product-image"
-                          onClick={() => handleImageClick(produit)}
-                          onError={(e) => {
-                            console.error('Erreur de chargement image:', produit.nom);
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                          }}
-                        sx={{
-                            width: 100, 
-                            height: 100, 
-                          objectFit: 'cover',
-                          borderRadius: 3,
-                            border: '3px solid #10b981',
-                            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                            filter: 'brightness(1.2) contrast(1.1)',
-                            cursor: 'pointer',
-                            boxShadow: '0 8px 25px rgba(16,185,129,0.3)',
-                            '&:hover': {
-                              transform: 'scale(1.1)',
-                              border: '3px solid #34d399',
-                              boxShadow: '0 15px 35px rgba(16,185,129,0.6)'
-                            }
-                          }} 
-                        />
-                        <IconButton
-                          onClick={() => handleImageClick(produit)}
-                          sx={{
-                            position: 'absolute',
-                            top: -8,
-                            right: -8,
-                            backgroundColor: 'rgba(16,185,129,0.9)',
-                            color: 'white',
-                            width: 24,
-                            height: 24,
-                            '&:hover': {
-                              backgroundColor: '#10b981',
-                              transform: 'scale(1.1)'
-                            },
-                            transition: 'all 0.2s ease'
-                          }}
-                        >
-                          <ZoomIn sx={{ fontSize: 16 }} />
-                        </IconButton>
-                      </Box>
-                      {/* Fallback si pas d'image ou erreur */}
-                      <Box
-                        sx={{
-                          width: 80,
-                          height: 80,
-                          borderRadius: 2,
-                          display: 'none',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          backgroundColor: '#10b981',
-                          color: 'white',
-                          fontSize: '2rem',
-                          fontWeight: 'bold',
-                          border: '2px solid rgba(16,185,129,0.4)'
-                        }}
-                      >
-                        {produit.categorie ? produit.categorie.charAt(0).toUpperCase() : 'P'}
-                      </Box>
-                    <Chip 
-                      label={produit.categorie} 
-                      size="small" 
-                      sx={{ 
-                        background: 'linear-gradient(135deg, #10b981, #34d399)',
-                        color: 'white',
-                        fontWeight: 'bold',
-                        fontSize: '0.8rem',
-                        animation: 'glow 2s ease-in-out infinite alternate',
-                        boxShadow: '0 4px 15px rgba(16,185,129,0.4)',
-                        '&:hover': {
-                          transform: 'scale(1.15)',
-                          boxShadow: '0 6px 20px rgba(16,185,129,0.6)'
-                        },
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                      }} 
-                    />
-                  </Box>
-
-                  <Typography variant="h6" sx={{ 
-                    color: 'white', 
-                    mb: 1, 
-                    fontWeight: 'bold',
-                    fontSize: '1.1rem',
-                    textShadow: '0 2px 4px rgba(0,0,0,0.8)',
-                    '&:hover': { 
-                      color: '#10b981',
-                      textShadow: '0 0 15px rgba(16, 185, 129, 0.8)'
-                    },
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                  }}>
-                    {produit.nom}
-                  </Typography>
-                  
-                  <Typography variant="body2" sx={{ 
-                    color: 'rgba(255,255,255,0.8)', 
-                    mb: 2, 
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
-                  }}>
-                    {produit.description}
-                  </Typography>
-
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Rating 
-                      value={produit.note || 4} 
-                      readOnly 
-                      precision={0.5} 
-                      size="small" 
-                      sx={{ 
-                        mr: 1,
-                        '& .MuiRating-iconFilled': {
-                          color: '#fbbf24'
-                        }
-                      }} 
-                    />
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                      ({produit.nombreAvis || 25} avis)
-                    </Typography>
-                  </Box>
-
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                    <Typography variant="h5" sx={{ 
-                      fontWeight: '900',
-                      color: '#10b981',
-                      fontSize: '1.8rem',
-                      textShadow: '0 0 20px rgba(16, 185, 129, 0.8), 0 2px 4px rgba(0,0,0,0.8)',
-                      background: 'linear-gradient(135deg, #10b981, #34d399)',
-                      backgroundClip: 'text',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent'
-                    }}>
-                      {parseFloat(produit.prix || 0).toFixed(2)} €
-                    </Typography>
-                    <Chip 
-                      label={produit.stock > 0 ? 'En stock' : 'Rupture'} 
-                      size="small" 
-                      color={produit.stock > 0 ? 'success' : 'error'} 
-                      sx={{ fontWeight: 'bold' }} 
-                    />
-                  </Box>
-                </CardContent>
-                
-                <CardActions sx={{ p: 2 }}>
-                  <Button 
-                    fullWidth 
-                    variant="contained" 
-                    startIcon={<ShoppingCart />}
-                    onClick={() => handleOpenBuy(produit)}
-                    className="buy-button"
-                    sx={{ 
-                      background: 'linear-gradient(135deg, #10b981, #34d399)',
-                      fontWeight: 'bold',
-                      py: 2,
-                      borderRadius: 3,
-                      fontSize: '1.1rem',
-                      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: '0 8px 25px rgba(16, 185, 129, 0.4)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      '&:hover': { 
-                        boxShadow: '0 15px 35px rgba(16, 185, 129, 0.6)',
-                        transform: 'translateY(-2px)'
-                      }
-                    }}
-                  >
-                    Acheter
-                  </Button>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-
-        {/* Modal d'achat simplifié */}
-        <Dialog 
-          open={buyDialogOpen} 
-          onClose={() => setBuyDialogOpen(false)}
-          maxWidth="md"
-          fullWidth
-          PaperProps={{
-            sx: {
-              background: 'linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(6,78,59,0.15) 100%)', 
-              backdropFilter: 'blur(20px)', 
-              borderRadius: 4,
-              border: '1px solid rgba(16,185,129,0.3)', 
-              boxShadow: '0 25px 50px -12px rgba(16, 185, 129, 0.2)', 
-              maxHeight: '90vh'
-            }
-          }}
-        >
-          <DialogTitle sx={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
-            🛒 Commander {selectedProduit?.nom}
-          </DialogTitle>
-          
-          <DialogContent sx={{ color: 'white' }}>
-            <TextField
-              label="Nom complet" 
-              value={clientNom} 
-              onChange={(e) => setClientNom(e.target.value)} 
-              fullWidth
-              sx={{ mb: 2 }} 
-              InputProps={{
-                sx: {
-                  color: 'white',
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
-                    '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
-                    '&.Mui-focused fieldset': { borderColor: '#10b981' }
-                  } 
-                } 
-              }} 
-            />
-            <TextField
-              type="email" 
-              label="Email" 
-              value={clientEmail} 
-              onChange={(e) => setClientEmail(e.target.value)} 
-              fullWidth
-              sx={{ mb: 2 }} 
-              InputProps={{
-                sx: {
-                    color: 'white',
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
-                    '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
-                    '&.Mui-focused fieldset': { borderColor: '#10b981' }
-                  } 
-                }
-              }}
-            />
-            <TextField 
-              type="tel" 
-              label="Téléphone" 
-              value={clientPhone} 
-              onChange={(e) => setClientPhone(e.target.value)} 
-              fullWidth 
-              sx={{ mb: 2 }} 
-              InputProps={{ 
-                sx: { 
-                  color: 'white',
-                  '& .MuiOutlinedInput-root': { 
-                    '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
-                    '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
-                    '&.Mui-focused fieldset': { borderColor: '#10b981' }
-                  } 
-                } 
-              }} 
-            />
-            <TextField 
-              label={addressLoading ? "Adresse (détection en cours...)" : "Adresse (optionnelle)"} 
-              value={clientAdresse} 
-              onChange={(e) => setClientAdresse(e.target.value)} 
-              fullWidth 
-              multiline 
-              rows={2}
-              sx={{ mb: 2 }} 
-              InputProps={{ 
-                endAdornment: addressLoading ? (
-                  <InputAdornment position="end">
-                    <CircularProgress size={20} sx={{ color: '#10b981' }} />
-                  </InputAdornment>
-                ) : null,
-                sx: { 
-                    color: 'white',
-                  '& .MuiOutlinedInput-root': { 
-                    '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
-                    '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
-                    '&.Mui-focused fieldset': { borderColor: '#10b981' }
-                  } 
-                }
-              }}
-              helperText={addressLoading ? "📍 Détection de votre rue, quartier et ville en cours..." : "💡 Cliquez sur 'Obtenir ma position' pour détecter automatiquement votre rue, quartier et ville"}
-              FormHelperTextProps={{
-                sx: { color: addressLoading ? '#10b981' : 'rgba(255,255,255,0.6)' }
-              }}
-            />
-            <TextField
-              type="number"
-              label="Quantité"
-              value={quantityInput}
-              onChange={(e) => setQuantityInput(Math.max(1, parseInt(e.target.value || '1', 10)))}
-              inputProps={{ min: 1 }}
-              fullWidth 
-              sx={{ mb: 3 }} 
-              InputProps={{
-                sx: {
-                  color: 'white',
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
-                    '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
-                    '&.Mui-focused fieldset': { borderColor: '#10b981' }
-                  }
-                }
-              }}
-            />
-
-            {/* Section Géolocalisation */}
-            <Box sx={{ mb: 3, p: 2, borderRadius: 2, backgroundColor: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)' }}>
-              <Typography variant="h6" sx={{ color: 'white', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <LocationOn sx={{ color: '#10b981' }} />
-                📍 Votre Localisation
-              </Typography>
-              
-              <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-                <Button
-                  variant="contained"
-                  startIcon={locationLoading ? <CircularProgress size={20} color="inherit" /> : <GpsFixed />}
-                  onClick={getCurrentLocation}
-                  disabled={locationLoading}
-                  sx={{
-                    backgroundColor: '#10b981',
-                    '&:hover': { backgroundColor: '#059669' },
-                    flex: '1 1 auto',
-                    minWidth: 200
-                  }}
-                >
-                  {locationLoading ? 'Localisation...' : 'Obtenir ma position'}
-                </Button>
-                
-                {currentLocation && (
-                  <Button
-                    variant="outlined"
-                    startIcon={<Map />}
-                    onClick={openInGoogleMaps}
-                    sx={{
-                      borderColor: '#10b981',
-                      color: '#10b981',
-                      '&:hover': { 
-                        borderColor: '#059669',
-                        backgroundColor: 'rgba(16,185,129,0.1)'
-                      }
-                    }}
-                  >
-                    Ouvrir dans Google Maps
-                  </Button>
-                )}
-              </Box>
-
-              {locationError && (
-                <Alert severity="error" sx={{ mb: 2, backgroundColor: 'rgba(239, 68, 68, 0.1)' }}>
-                  {locationError}
-                </Alert>
-              )}
-
-              {currentLocation && (
-                <Box sx={{ p: 2, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 1 }}>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', mb: 1 }}>
-                    📍 Position GPS détectée avec précision :
-                  </Typography>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mb: 1 }}>
-                    <Typography variant="body2" sx={{ color: 'white', fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                      Lat: {currentLocation.lat.toFixed(8)}
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: 'white', fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                      Lng: {currentLocation.lng.toFixed(8)}
-                    </Typography>
-                  </Box>
-                  {clientAdresse && (
-                    <Box sx={{ mt: 1, p: 1, backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 1 }}>
-                      <Typography variant="caption" sx={{ color: '#10b981', fontWeight: 'bold' }}>
-                        🏠 Adresse détectée :
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: 'white', mt: 0.5, lineHeight: 1.4 }}>
-                        {clientAdresse}
-                      </Typography>
-                      <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                        {clientAdresse.includes(',') && (
-                          <>
-                            {clientAdresse.split(',')[0] && (
-                              <Chip 
-                                label={`📍 ${clientAdresse.split(',')[0].trim()}`} 
-                                size="small" 
-                                sx={{ 
-                                  backgroundColor: 'rgba(16,185,129,0.2)', 
-                                  color: '#10b981',
-                                  fontSize: '0.7rem'
-                                }} 
-                              />
-                            )}
-                            {clientAdresse.split(',')[1] && (
-                              <Chip 
-                                label={`🏘️ ${clientAdresse.split(',')[1].trim()}`} 
-                                size="small" 
-                                sx={{ 
-                                  backgroundColor: 'rgba(16,185,129,0.2)', 
-                                  color: '#10b981',
-                                  fontSize: '0.7rem'
-                                }} 
-                              />
-                            )}
-                            {clientAdresse.split(',')[2] && (
-                              <Chip 
-                                label={`🏙️ ${clientAdresse.split(',')[2].trim()}`} 
-                                size="small" 
-                                sx={{ 
-                                  backgroundColor: 'rgba(16,185,129,0.2)', 
-                                  color: '#10b981',
-                                  fontSize: '0.7rem'
-                                }} 
-                              />
-                            )}
-                          </>
-                        )}
-                      </Box>
-                    </Box>
-                  )}
-                </Box>
-              )}
-
-              {/* Carte simple avec iframe Google Maps (sans clé API) */}
-              {showMap && currentLocation && (
-                <Box sx={{ mt: 2 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                      🗺️ Carte de votre position :
-                    </Typography>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<Map />}
-                      onClick={openInGoogleMaps}
-                      sx={{
-                        borderColor: '#10b981',
-                        color: '#10b981',
-                        fontSize: '0.75rem',
-                        '&:hover': { 
-                          borderColor: '#059669',
-                          backgroundColor: 'rgba(16,185,129,0.1)'
-                        }
-                      }}
-                    >
-                      Ouvrir dans Google Maps
-                    </Button>
-                  </Box>
-                  <Box
-                    component="iframe"
-                    src={`https://maps.google.com/maps?q=${currentLocation.lat},${currentLocation.lng}&z=18&output=embed&maptype=roadmap`}
-                    sx={{
-                      width: '100%',
-                      height: 250,
-                      border: '2px solid rgba(16,185,129,0.4)',
-                      borderRadius: 2,
-                      filter: 'brightness(0.9)'
-                    }}
-                    title="Carte de localisation"
-                    onError={() => {
-                      console.log('Erreur de chargement de la carte iframe');
-                    }}
-                  />
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', mt: 1, display: 'block' }}>
-                    💡 Si la carte ne s'affiche pas, cliquez sur "Ouvrir dans Google Maps" ci-dessus
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-          </DialogContent>
-          
-          <DialogActions sx={{ p: 3, gap: 2 }}>
-            <Button 
-              onClick={() => setBuyDialogOpen(false)}
-              sx={{ 
-                flex: 1,
-                background: '#6b7280',
-                color: 'white',
-                fontWeight: 'bold',
-                '&:hover': { background: '#4b5563' }
-              }}
-            >
-              Annuler
-            </Button>
-            <Button 
-              variant="contained"
-              onClick={handleConfirmBuy}
-              sx={{ 
-                flex: 1,
-                background: 'linear-gradient(90deg, #10b981, #059669)',
-                fontWeight: 'bold',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'scale(1.05)',
-                  boxShadow: '0 15px 30px -5px rgba(16, 185, 129, 0.4)'
-                }
-              }}
-            >
-              Confirmer
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Snackbar */}
-        <Snackbar 
-          open={snackbar.open} 
-          autoHideDuration={6000} 
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        >
-          <Alert 
-            onClose={() => setSnackbar({ ...snackbar, open: false })}
-            severity={snackbar.severity} 
-            sx={{ width: '100%' }}
-          >
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
-
-        {/* Modal d'agrandissement d'image */}
-        <Dialog
-          open={imageModalOpen}
-          onClose={handleCloseImageModal}
-          maxWidth="md"
-          fullWidth
-          PaperProps={{
-            sx: {
-              backgroundColor: 'rgba(15, 23, 42, 0.95)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(16,185,129,0.3)',
-              borderRadius: 4
-            }
-          }}
-        >
-          <DialogTitle sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            color: 'white',
-            borderBottom: '1px solid rgba(16,185,129,0.3)'
-          }}>
-            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-              {selectedProductName}
-            </Typography>
-            <IconButton 
-              onClick={handleCloseImageModal}
-              sx={{ 
-                color: 'white',
-                '&:hover': { 
-                  backgroundColor: 'rgba(16,185,129,0.2)',
-                  transform: 'scale(1.1)'
-                }
-              }}
-            >
-              <Close />
-            </IconButton>
-          </DialogTitle>
-          <DialogContent sx={{ p: 3, textAlign: 'center' }}>
-            <Zoom in={imageModalOpen} timeout={300}>
-              <Box
-                component="img"
-                src={selectedImage}
-                alt={selectedProductName}
                 sx={{
-                  maxWidth: '100%',
-                  maxHeight: '70vh',
-                  objectFit: 'contain',
-                  borderRadius: 2,
-                  border: '2px solid rgba(16,185,129,0.4)',
-                  boxShadow: '0 25px 50px -12px rgba(16, 185, 129, 0.3)',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'scale(1.02)',
-                    boxShadow: '0 35px 60px -12px rgba(16, 185, 129, 0.5)'
-                  }
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '25px',
+                    '& fieldset': {
+                      borderColor: 'rgba(0, 255, 136, 0.3)',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#00ff88',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#00ff88',
+                    },
+                  },
+                  '& .MuiInputBase-input': {
+                    color: 'white',
+                    '&::placeholder': {
+                      color: 'rgba(255, 255, 255, 0.7)',
+                    },
+                  },
                 }}
               />
-            </Zoom>
-          </DialogContent>
-        </Dialog>
-      </Container>
+              
+              <div className="filters-row">
+                <select 
+                  value={selectedCategory} 
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="category-select"
+                >
+                  {categories.map(category => (
+                    <option key={category.value} value={category.value}>
+                      {category.label}
+                    </option>
+                  ))}
+                </select>
+                
+                <select 
+                  value={sortBy} 
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="sort-select"
+                >
+                  <option value="name">Trier par nom</option>
+                  <option value="price-asc">Prix croissant</option>
+                  <option value="price-desc">Prix décroissant</option>
+                  <option value="rating">Meilleures notes</option>
+                </select>
+              </div>
+            </div>
+          </div>
 
-      {/* Styles CSS pour les animations */}
+          {/* Grille des produits */}
+          <div className="products-grid">
+            {filteredProducts.map((product, index) => (
+              <Fade in={true} timeout={300 + index * 100} key={product.id}>
+                <Card 
+                  className={`product-card ${hoveredCard === product.id ? 'hovered' : ''}`}
+                  onMouseEnter={() => setHoveredCard(product.id)}
+                  onMouseLeave={() => setHoveredCard(null)}
+                >
+                  <div className="product-image-container">
+                    <img 
+                      src={product.image} 
+                      alt={product.nom}
+                      className="product-image"
+                      onClick={() => openPreview(product.image)}
+                      style={{ cursor: 'zoom-in' }}
+                    />
+                    <div 
+                      className="product-badge"
+                      style={{ backgroundColor: getBadgeColor(product.badge) }}
+                    >
+                      {product.badge}
+                    </div>
+                    {/* Bouton zoom sur la badge */}
+                    <button 
+                      className="zoom-btn" 
+                      aria-label="Zoomer l'image"
+                      onClick={(e) => { e.stopPropagation(); openPreview(product.image); }}
+                      title="Zoomer"
+                    >
+                      <ZoomIn style={{ color: '#fff' }} />
+                    </button>
+                    <div className="product-overlay">
+                      <IconButton 
+                        className="quick-view-btn"
+                        onClick={() => addToCart(product)}
+                      >
+                        <ShoppingCart />
+                      </IconButton>
+                    </div>
+                  </div>
+                  
+                  <CardContent className="product-content">
+                    <Typography variant="h6" className="product-title">
+                      {product.nom}
+                    </Typography>
+                    
+                    <Typography variant="body2" className="product-description">
+                      {product.description}
+                    </Typography>
+                    
+                    <div className="product-rating">
+                      <Rating value={product.note} precision={0.1} readOnly size="small" />
+                      <span className="rating-text">({product.nombreAvis})</span>
+                    </div>
+                    
+                    <div className="product-info">
+                      <Chip 
+                        label={product.categorie} 
+                        size="small" 
+                        className="category-chip"
+                      />
+                      <span className="product-stock">
+                        {product.stock > 0 ? `${product.stock} en stock` : 'Rupture de stock'}
+                      </span>
+                    </div>
+                  </CardContent>
+                  
+                  <CardActions className="product-actions">
+                    <div className="price-container">
+                      <span className="product-price">{product.prix}€</span>
+                      <span className="product-reference">Ref: {product.reference}</span>
+                    </div>
+                    
+                    <Button 
+                      variant="contained" 
+                      className="add-to-cart-btn"
+                      onClick={() => addToCart(product)}
+                      disabled={product.stock === 0}
+                      startIcon={<ShoppingCart />}
+                    >
+                      {product.stock > 0 ? 'Ajouter' : 'Indisponible'}
+                    </Button>
+                  </CardActions>
+                </Card>
+              </Fade>
+            ))}
+          </div>
+
+          {filteredProducts.length === 0 && (
+            <div className="no-products">
+              <Typography variant="h5" className="no-products-title">
+                Aucun produit trouvé
+              </Typography>
+              <Typography variant="body1" className="no-products-text">
+                Essayez de modifier vos critères de recherche
+              </Typography>
+            </div>
+          )}
+        </div>
+      </main>
+      {loading && (
+        <div className="container" style={{ padding: '20px 0' }}>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <span>Chargement des articles...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <footer className="footer">
+        <div className="container">
+          <div className="footer-content">
+            <div className="footer-logo">
+              <ShoppingCart />
+            </div>
+            <span>AutoGenius Boutique</span>
+          </div>
+          <p>© 2024 AutoGenius - L'avenir du garage management 🚗</p>
+        </div>
+      </footer>
+
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert 
+          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
+      {/* Preview image dialog (popup) */}
+      {previewOpen && (
+        <div className="image-preview-backdrop" onClick={closePreview}>
+          <div className="image-preview-container" onClick={(e) => e.stopPropagation()}>
+            <img 
+              src={previewSrc} 
+              alt="Aperçu produit"
+              className={`image-preview ${isZoomed ? 'zoomed' : ''}`}
+              onClick={() => setIsZoomed(!isZoomed)}
+              style={{ cursor: isZoomed ? 'zoom-out' : 'zoom-in' }}
+            />
+            <button className="close-preview" onClick={closePreview}>✕</button>
+            <button className="zoom-toggle" onClick={() => setIsZoomed(!isZoomed)} aria-label="Basculer le zoom">
+              {isZoomed ? <ZoomOut style={{ color: '#fff' }} /> : <ZoomIn style={{ color: '#fff' }} />}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Order dialog */}
+      <Dialog open={orderOpen} onClose={() => setOrderOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Finaliser l'achat</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            {orderProduct && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <img src={orderProduct.image} alt={orderProduct.nom} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8 }} />
+                <Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{orderProduct.nom}</Typography>
+                  <Typography variant="body2">Ref: {orderProduct.reference} — {orderProduct.prix}€</Typography>
+                </Box>
+              </Box>
+            )}
+            <TextField label="Nom complet" fullWidth required value={orderForm.nom} onChange={(e) => setOrderForm({ ...orderForm, nom: e.target.value })} />
+            <TextField label="Email" type="email" fullWidth required value={orderForm.email} onChange={(e) => setOrderForm({ ...orderForm, email: e.target.value })} />
+            <TextField label="Téléphone" fullWidth required value={orderForm.telephone} onChange={(e) => setOrderForm({ ...orderForm, telephone: e.target.value })} />
+            <TextField label="Adresse complète" fullWidth required value={orderForm.adresse} onChange={(e) => setOrderForm({ ...orderForm, adresse: e.target.value })} />
+            <TextField label="Quantité" type="number" inputProps={{ min: 1, step: 1 }} fullWidth value={orderQty} onChange={(e) => setOrderQty(e.target.value)} />
+            <Alert severity="info">Votre localisation sera récupérée automatiquement (si autorisée) pour faciliter la livraison.</Alert>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOrderOpen(false)}>Annuler</Button>
+          <Button variant="contained" onClick={submitOrder} disabled={orderSubmitting}>{orderSubmitting ? 'Envoi...' : 'Confirmer la commande'}</Button>
+        </DialogActions>
+      </Dialog>
+
       <style>{`
-        @keyframes drive {
-          0%, 100% { transform: translateX(0) rotate(0deg); }
-          25% { transform: translateX(10px) rotate(2deg); }
-          75% { transform: translateX(-10px) rotate(-2deg); }
+        .boutique-container {
+          min-height: 100vh;
+          background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+          color: white;
+          overflow-x: hidden;
+          position: relative;
         }
-        @keyframes bounce {
-          0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-          40% { transform: translateY(-10px); }
-          60% { transform: translateY(-5px); }
+
+        /* Particules */
+        .particle {
+          position: fixed;
+          border-radius: 50%;
+          pointer-events: none;
+          z-index: 1;
+          animation: float 6s ease-in-out infinite;
         }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.7; transform: scale(1.05); }
+
+        .cursor-glow {
+          position: fixed;
+          width: 300px;
+          height: 300px;
+          background: radial-gradient(circle, rgba(0, 255, 136, 0.15), transparent);
+          border-radius: 50%;
+          pointer-events: none;
+          z-index: 2;
+          filter: blur(30px);
+          transition: all 0.1s ease;
         }
-        @keyframes rotate {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+
+        /* Header */
+        .header {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 100;
+          background: rgba(10, 10, 10, 0.8);
+          backdrop-filter: blur(20px);
+          border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+          transition: all 0.3s ease;
         }
-        @keyframes sparkle {
-          0% { opacity: 1; transform: scale(1) rotate(0deg); }
-          100% { opacity: 0; transform: scale(0) rotate(180deg); }
+
+        .header.scrolled {
+          background: rgba(10, 10, 10, 0.95);
+          border-bottom: 1px solid rgba(0, 255, 136, 0.4);
         }
-        @keyframes explode {
-          0% { opacity: 1; transform: scale(1); }
-          100% { opacity: 0; transform: scale(2); }
+
+        .container {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 0 20px;
         }
-        @keyframes slideInDown {
-          from { transform: translateY(-100px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
+
+        .header-content {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 15px 0;
         }
-        @keyframes slideInLeft {
-          from { transform: translateX(-100px); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
+
+        .logo-section {
+          display: flex;
+          align-items: center;
+          gap: 15px;
+          cursor: pointer;
         }
-        @keyframes slideInUp {
-          from { transform: translateY(100px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
+
+        .logo-icon {
+          width: 50px;
+          height: 50px;
+          background: linear-gradient(135deg, #00ff88, #00aa55);
+          border-radius: 15px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transform: rotate(12deg);
+          box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
+          animation: logoFloat 4s ease-in-out infinite;
         }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
+
+        .logo-inner {
+          background: rgba(255, 255, 255, 0.9);
+          border-radius: 10px;
+          padding: 8px;
         }
+
+        .logo-car {
+          color: #00aa55;
+        }
+
+        .logo-text h1 {
+          margin: 0;
+          font-size: 24px;
+          font-weight: 900;
+          background: linear-gradient(90deg, #fff, #00ff88);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .logo-text span {
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.6);
+        }
+
+        .desktop-nav {
+          display: flex;
+          gap: 30px;
+        }
+
+        .nav-link {
+          color: rgba(255, 255, 255, 0.85);
+          text-decoration: none;
+          font-weight: 600;
+          transition: color 0.2s ease, transform 0.2s ease;
+          position: relative;
+          background: transparent;
+          border: none;
+          padding: 6px 0;
+        }
+
+        .nav-link:hover {
+          color: #00ff88;
+          transform: translateY(-2px);
+        }
+
+        .nav-link::after {
+          content: '';
+          position: absolute;
+          bottom: -5px;
+          left: 0;
+          width: 0;
+          height: 2px;
+          background: #00ff88;
+          transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::after {
+          width: 100%;
+        }
+
+        .mobile-menu-btn {
+          display: none;
+          background: none;
+          border: none;
+          color: white;
+          font-size: 24px;
+          cursor: pointer;
+        }
+
+        .mobile-menu {
+          background: transparent;
+          border-top: none;
+          padding: 20px;
+        }
+
+        .mobile-nav-link {
+          display: block;
+          color: rgba(255, 255, 255, 0.85);
+          text-decoration: none;
+          padding: 12px 0;
+          border: none;
+          background: transparent;
+          text-align: left;
+        }
+
+        /* Section principale */
+        .main-section {
+          padding-top: 120px;
+          min-height: 100vh;
+          position: relative;
+          z-index: 10;
+        }
+
+        /* Hero section */
+        .hero-section {
+          padding: 60px 0;
+          position: relative;
+        }
+
+        .hero-content {
+          position: relative;
+          text-align: center;
+        }
+
+        /* Badges 3D */
+        .badges-container {
+          position: absolute;
+          top: -50px;
+          right: -50px;
+          z-index: 5;
+        }
+
+        .badge-3d {
+          position: absolute;
+          width: 120px;
+          height: 80px;
+          background: linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(0, 170, 85, 0.2));
+          border-radius: 15px;
+          border: 1px solid rgba(0, 255, 136, 0.3);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          backdrop-filter: blur(10px);
+          animation: badgeFloat 6s ease-in-out infinite;
+        }
+
+        .badge-3d:nth-child(1) {
+          top: 0;
+          right: 0;
+          animation-delay: 0s;
+        }
+
+        .badge-3d:nth-child(2) {
+          top: 100px;
+          right: 80px;
+          animation-delay: 2s;
+        }
+
+        .badge-3d:nth-child(3) {
+          top: 200px;
+          right: 20px;
+          animation-delay: 4s;
+        }
+
+        .badge-icon {
+          font-size: 24px;
+        }
+
+        .badge-text {
+          flex: 1;
+        }
+
+        .badge-title {
+          font-size: 11px;
+          font-weight: 800;
+          color: #00ff88;
+          text-shadow: 0 0 8px rgba(0, 255, 136, 0.5);
+          line-height: 1.2;
+        }
+
+        .badge-subtitle {
+          font-size: 9px;
+          color: #ffffff;
+          font-weight: 600;
+          text-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+          line-height: 1.1;
+        }
+
+        .badge-glow {
+          position: absolute;
+          inset: -5px;
+          border-radius: 20px;
+          filter: blur(15px);
+          opacity: 0.3;
+          z-index: -1;
+        }
+
+        /* Hero content */
+        .welcome-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: linear-gradient(90deg, rgba(0, 255, 136, 0.2), rgba(0, 170, 85, 0.2));
+          border: 1px solid rgba(0, 255, 136, 0.4);
+          border-radius: 50px;
+          padding: 10px 20px;
+          margin-bottom: 30px;
+          animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        .star-icon {
+          color: #ffff00;
+          animation: twinkle 1.5s ease-in-out infinite;
+        }
+
+        .hero-title {
+          font-size: 64px;
+          font-weight: 900;
+          line-height: 1.1;
+          margin: 0 0 30px 0;
+          position: relative;
+          z-index: 15;
+        }
+
+        .title-line {
+          display: block;
+          background: linear-gradient(90deg, #fff, rgba(255, 255, 255, 0.7));
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .title-line.neon {
+          color: #ffffff;
+          text-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.4);
+          -webkit-text-stroke: 1px rgba(255, 255, 255, 0.5);
+          z-index: 10;
+          position: relative;
+        }
+
+        .hero-description {
+          font-size: 18px;
+          line-height: 1.6;
+          color: rgba(255, 255, 255, 0.8);
+          margin-bottom: 40px;
+          max-width: 600px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+
+        .highlight {
+          color: #00ff88;
+          font-weight: 600;
+          text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+
+        /* Filtres */
+        .filters-section {
+          padding: 40px 0;
+        }
+
+        .filters-container {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .filters-row {
+          display: flex;
+          gap: 20px;
+          justify-content: center;
+        }
+
+        .category-select, .sort-select {
+          padding: 12px 20px;
+          border-radius: 25px;
+          border: 1px solid rgba(0, 255, 136, 0.3);
+          background: rgba(255, 255, 255, 0.1);
+          color: white;
+          font-size: 14px;
+          backdrop-filter: blur(10px);
+          transition: all 0.3s ease;
+        }
+
+        .category-select:focus, .sort-select:focus {
+          outline: none;
+          border-color: #00ff88;
+          box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .category-select option, .sort-select option {
+          background: #1a1a1a;
+          color: white;
+        }
+
+        /* Grille des produits */
+        .products-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 30px;
+          padding: 40px 0;
+        }
+
+        .product-card {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(0, 255, 136, 0.2);
+          border-radius: 20px;
+          overflow: hidden;
+          transition: all 0.3s ease;
+          backdrop-filter: blur(10px);
+          position: relative;
+        }
+
+        .product-card:hover {
+          transform: translateY(-10px) scale(1.02);
+          border-color: #00ff88;
+          box-shadow: 0 20px 40px rgba(0, 255, 136, 0.2);
+        }
+
+        .product-image-container {
+          position: relative;
+          height: 200px;
+          overflow: hidden;
+        }
+
+        .product-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: transform 0.3s ease;
+        }
+
+        .product-card:hover .product-image {
+          transform: scale(1.1);
+        }
+
+        .product-badge {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          padding: 5px 10px;
+          border-radius: 15px;
+          font-size: 12px;
+          font-weight: 600;
+          color: white;
+          text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        .zoom-btn {
+          position: absolute;
+          top: 10px;
+          left: 10px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: rgba(0,0,0,0.45);
+          border: 1px solid rgba(255,255,255,0.3);
+          cursor: pointer;
+          backdrop-filter: blur(6px);
+          transition: transform 0.15s ease, background 0.2s ease;
+          z-index: 3;
+          box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+        }
+
+        .zoom-btn:hover {
+          transform: scale(1.06);
+          background: rgba(0,0,0,0.6);
+        }
+
+        .product-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+          z-index: 2;
+        }
+
+        .product-card:hover .product-overlay {
+          opacity: 1;
+        }
+
+        .quick-view-btn {
+          background: rgba(0, 255, 136, 0.9);
+          color: white;
+          border-radius: 50%;
+          width: 50px;
+          height: 50px;
+        }
+
+        .quick-view-btn:hover {
+          background: #00ff88;
+          transform: scale(1.1);
+        }
+
+        .product-content {
+          padding: 20px;
+        }
+
+        .product-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: #00ff88;
+          margin-bottom: 10px;
+        }
+
+        .product-description {
+          color: rgba(255, 255, 255, 0.8);
+          margin-bottom: 15px;
+          line-height: 1.4;
+        }
+
+        .product-rating {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 15px;
+        }
+
+        .rating-text {
+          color: rgba(255, 255, 255, 0.6);
+          font-size: 14px;
+        }
+
+        .product-info {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .category-chip {
+          background: rgba(0, 255, 136, 0.2);
+          color: #00ff88;
+          border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+
+        .product-stock {
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.6);
+        }
+
+        .product-actions {
+          padding: 20px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .price-container {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .product-price {
+          font-size: 24px;
+          font-weight: 700;
+          color: #00ff88;
+        }
+
+        .product-reference {
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.6);
+        }
+
+        .add-to-cart-btn {
+          background: linear-gradient(135deg, #00ff88, #00aa55);
+          color: #000;
+          border-radius: 25px;
+          padding: 10px 20px;
+          font-weight: 600;
+          transition: all 0.3s ease;
+        }
+
+        .add-to-cart-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .add-to-cart-btn:disabled {
+          background: rgba(255, 255, 255, 0.1);
+          color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* No products */
+        .no-products {
+          text-align: center;
+          padding: 60px 20px;
+        }
+
+        .no-products-title {
+          color: #00ff88;
+          margin-bottom: 20px;
+        }
+
+        .no-products-text {
+          color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Footer */
+        .footer {
+          border-top: 1px solid rgba(0, 255, 136, 0.2);
+          background: rgba(0, 0, 0, 0.3);
+          padding: 30px 0;
+          position: relative;
+          z-index: 10;
+        }
+
+        .footer-content {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-direction: column;
+          gap: 15px;
+          text-align: center;
+        }
+
+        .footer-logo {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          color: #00ff88;
+        }
+
+        /* Image preview */
+        .image-preview-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.8);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2000;
+          padding: 20px;
+        }
+        .image-preview-container {
+          position: relative;
+          max-width: 90vw;
+          max-height: 90vh;
+        }
+        .image-preview {
+          max-width: 90vw;
+          max-height: 90vh;
+          object-fit: contain;
+          transition: transform 0.2s ease;
+        }
+        .image-preview.zoomed {
+          transform: scale(1.8);
+        }
+        .close-preview {
+          position: absolute;
+          top: -10px;
+          right: -10px;
+          background: rgba(255,255,255,0.15);
+          color: white;
+          border: 1px solid rgba(255,255,255,0.3);
+          padding: 6px 10px;
+          border-radius: 20px;
+          cursor: pointer;
+          backdrop-filter: blur(6px);
+        }
+        .zoom-toggle {
+          position: absolute;
+          right: -10px;
+          bottom: -10px;
+          background: rgba(255,255,255,0.15);
+          border: 1px solid rgba(255,255,255,0.3);
+          border-radius: 20px;
+          padding: 6px 10px;
+          cursor: pointer;
+          backdrop-filter: blur(6px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        /* Animations */
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
+        }
+
+        @keyframes logoFloat {
+          0%, 100% { transform: rotate(12deg) translateY(0px); }
+          50% { transform: rotate(12deg) translateY(-10px); }
+        }
+
+        @keyframes badgeFloat {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+        }
+
         @keyframes glow {
-          from { box-shadow: 0 0 5px rgba(16, 185, 129, 0.5); }
-          to { box-shadow: 0 0 20px rgba(16, 185, 129, 0.8); }
+          0% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.3); }
+          100% { box-shadow: 0 0 30px rgba(0, 255, 136, 0.6); }
         }
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
+
+        @keyframes twinkle {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
         }
-        @keyframes textGlow {
-          from { 
-            textShadow: '0 0 20px rgba(16, 185, 129, 0.8), 0 0 40px rgba(16, 185, 129, 0.4), 2px 2px 8px rgba(0,0,0,0.8)';
+
+        /* Responsive */
+        @media (max-width: 768px) {
+          .desktop-nav {
+            display: none;
           }
-          to { 
-            textShadow: '0 0 30px rgba(16, 185, 129, 1), 0 0 60px rgba(16, 185, 129, 0.6), 2px 2px 8px rgba(0,0,0,0.8)';
+
+          .mobile-menu-btn {
+            display: block;
+          }
+
+          .hero-title {
+            font-size: 48px;
+          }
+
+          .badges-container {
+            display: none;
+          }
+
+          .filters-row {
+            flex-direction: column;
+          }
+
+          .products-grid {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>
-    </Box>
+    </div>
   );
 };
 

@@ -70,6 +70,9 @@ const Sidebar = ({ userRole = 'admin' }) => {
   const [expandedSection, setExpandedSection] = useState('main');
   const [particles, setParticles] = useState([]);
   const [stats, setStats] = useState(null);
+  const [supplierMode, setSupplierMode] = useState(() => {
+    try { return localStorage.getItem('supplierMode') === '1'; } catch { return false; }
+  });
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
@@ -174,18 +177,27 @@ const Sidebar = ({ userRole = 'admin' }) => {
           { text: 'Fournisseurs', icon: <Business />, path: '/fournisseurs', badge: '12', color: '#3b82f6' },
           { text: 'Services', icon: <Settings />, path: '/services', badge: '8', color: '#60a5fa' },
           { text: 'Rendez-vous', icon: <Schedule />, path: '/rendez-vous', badge: stats?.rendezVous?.toString() || '0', color: '#93c5fd' },
+          { text: 'Demandes Prestations', icon: <Build />, path: '/demandes-prestations', badge: stats?.demandesPrestations?.toString() || '0', color: '#059669' },
+          { text: 'Garages', icon: <Business />, path: '/garages', badge: stats?.garages?.toString() || '0', color: '#10b981' },
           { text: 'Boutique', icon: <Store />, path: '/boutique', badge: '89', color: '#1e40af' },
           { text: 'Assistant IA', icon: <SmartToy />, path: '/assistant-ia', badge: '🤖', color: '#8b5cf6' }
         ];
       
       case 'mecanicien':
+      case 'garage':
         return [
           ...commonItems,
           { text: 'Assistant IA', icon: <SmartToy />, path: '/assistant-ia', badge: '🤖', color: '#8b5cf6' },
-          { text: 'Mes Réparations', icon: <Build />, path: '/mes-reparations', badge: stats?.reparationsEnCours?.toString() || '0', color: '#16a34a' },
-          { text: 'Rendez-vous', icon: <Schedule />, path: '/rendez-vous-mecano', badge: stats?.rendezVous?.toString() || '0', color: '#22c55e' },
-          { text: 'Pièces', icon: <Inventory />, path: '/pieces-mecano', badge: '45', color: '#34d399' },
-          { text: 'Véhicules', icon: <DirectionsCar />, path: '/vehicules-mecano', badge: stats?.vehicules?.toString() || '0', color: '#10b981' }
+          { text: 'Mes Demandes', icon: <Build />, path: '/garage-demandes', badge: stats?.demandesEnAttente?.toString() || '0', color: '#059669' },
+          { text: 'Pièces', icon: <Inventory />, path: '/pieces-garage', badge: '45', color: '#34d399' },
+          { text: 'Véhicules', icon: <DirectionsCar />, path: '/vehicules-garage', badge: stats?.vehicules?.toString() || '0', color: '#10b981' },
+          ...(supplierMode ? [{ text: 'Fournisseur', icon: <Store />, path: '/fournisseur', badge: null, color: '#f59e0b' }] : [])
+        ];
+      
+      case 'garage':
+        return [
+          ...commonItems,
+          { text: 'Mes Demandes', icon: <Build />, path: '/garage-demandes', badge: stats?.demandesEnAttente?.toString() || '0', color: '#059669' }
         ];
       
       case 'client':
@@ -194,7 +206,8 @@ const Sidebar = ({ userRole = 'admin' }) => {
           { text: 'Mes Véhicules', icon: <DirectionsCar />, path: '/mes-vehicules', badge: stats?.vehicules?.toString() || '0', color: '#ea580c' },
           { text: 'Mes Réparations', icon: <Build />, path: '/mes-reparations-client', badge: stats?.reparations?.toString() || '0', color: '#f59e0b' },
           { text: 'Mes Factures', icon: <Receipt />, path: '/mes-factures', badge: stats?.factures?.toString() || '0', color: '#fbbf24' },
-          { text: 'Prendre RDV', icon: <Schedule />, path: '/prendre-rdv', badge: null, color: '#fb923c' }
+          { text: 'Prendre RDV', icon: <Schedule />, path: '/prendre-rdv', badge: null, color: '#fb923c' },
+          { text: 'Demander Prestation', icon: <Build />, path: '/demander-prestation', badge: null, color: '#059669' }
         ];
       
       default:
@@ -221,6 +234,15 @@ const Sidebar = ({ userRole = 'admin' }) => {
           color: '#16a34a',
           gradient: 'linear-gradient(135deg, #16a34a, #22c55e)',
           avatar: 'M'
+        };
+      case 'garage':
+        return { 
+          title: 'Garage', 
+          subtitle: 'Gestion des prestations',
+          icon: <Business />, 
+          color: '#059669',
+          gradient: 'linear-gradient(135deg, #059669, #10b981)',
+          avatar: 'G'
         };
       case 'client':
         return { 
@@ -673,6 +695,22 @@ const Sidebar = ({ userRole = 'admin' }) => {
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {/* Toggle fournisseur */}
+            {userRole === 'garage' && (
+              <Tooltip title={supplierMode ? 'Mode fournisseur activé' : 'Devenir fournisseur'}>
+                <IconButton
+                  onClick={() => {
+                    const next = !supplierMode;
+                    setSupplierMode(next);
+                    try { localStorage.setItem('supplierMode', next ? '1' : '0'); } catch {}
+                    try { window.dispatchEvent(new CustomEvent('supplier-mode-changed', { detail: { enabled: next } })); } catch {}
+                  }}
+                  sx={{ color: supplierMode ? '#f59e0b' : 'white' }}
+                >
+                  <Store />
+                </IconButton>
+              </Tooltip>
+            )}
             <Tooltip title="Notifications">
               <IconButton sx={{ color: 'white' }}>
                 <Badge badgeContent={3} color="error">

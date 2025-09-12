@@ -28,6 +28,7 @@ import { dashboardAPI } from '../services/api';
 import DashboardAdmin from './DashboardAdmin';
 import DashboardMechanic from './DashboardMechanic';
 import DashboardClient from './DashboardClient';
+import DashboardGarage from './DashboardGarage';
 
 const Dashboard = ({ userRole = 'admin' }) => {
   const [stats, setStats] = useState(null);
@@ -200,6 +201,9 @@ const Dashboard = ({ userRole = 'admin' }) => {
   if (userRole === 'admin') {
     return <DashboardAdmin stats={stats} />;
   }
+  if (userRole === 'garage') {
+    return <DashboardGarage stats={stats} />;
+  }
   if (userRole === 'mecanicien') {
     return <DashboardMechanic stats={stats} />;
   }
@@ -210,7 +214,7 @@ const Dashboard = ({ userRole = 'admin' }) => {
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>
       <Typography variant="h4" gutterBottom sx={{ mb: 4 }}>
-        Tableau de bord - {userRole === 'admin' ? 'Administration' : userRole === 'mecanicien' ? 'Mécanicien' : 'Espace Client'}
+        Tableau de bord - {userRole === 'admin' ? 'Administration' : userRole === 'mecanicien' ? 'Garage' : userRole === 'garage' ? 'Garage' : 'Espace Client'}
       </Typography>
 
       {/* Statistiques */}

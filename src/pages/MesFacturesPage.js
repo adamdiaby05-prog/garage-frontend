@@ -163,7 +163,10 @@ const MesFacturesPage = () => {
     total: factures.length,
     payees: factures.filter(f => f.statut === 'payee').length,
     enAttente: factures.filter(f => f.statut === 'envoyee').length,
-    totalMontant: factures.reduce((sum, f) => sum + parseFloat(f.total_ttc || 0), 0)
+    totalMontant: factures.reduce((sum, f) => {
+      const ttc = f.total_ttc != null ? Number(f.total_ttc) : (f.total_ht != null ? Number(f.total_ht) * 1.2 : 0);
+      return sum + (isNaN(ttc) ? 0 : ttc);
+    }, 0)
   };
 
   return (
@@ -243,7 +246,11 @@ const MesFacturesPage = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                      {formatCurrency(facture.total_ttc)}
+                      {formatCurrency(
+                        facture.total_ttc != null
+                          ? Number(facture.total_ttc)
+                          : (facture.total_ht != null ? Number(facture.total_ht) * 1.2 : 0)
+                      )}
                     </Typography>
                   </TableCell>
                   <TableCell>

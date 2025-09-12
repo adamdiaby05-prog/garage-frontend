@@ -367,7 +367,7 @@ const MesReparationsContent = () => {
 
 const MesReparationsPage = () => {
   return (
-    <AuthGuard requiredRole="mecanicien">
+    <AuthGuard requiredRole="garage">
       <MesReparationsContent />
     </AuthGuard>
   );

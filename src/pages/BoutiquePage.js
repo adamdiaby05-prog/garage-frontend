@@ -51,6 +51,9 @@ const BoutiquePage = () => {
   // États pour le gestionnaire de photos
   const [photoManagerOpen, setPhotoManagerOpen] = useState(false);
   const [selectedProduitForPhotos, setSelectedProduitForPhotos] = useState(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewSrc, setPreviewSrc] = useState('');
+  const [isZoomed, setIsZoomed] = useState(false);
 
   // Charger les produits depuis la base de données
   useEffect(() => {
@@ -203,6 +206,17 @@ const BoutiquePage = () => {
   const handleClosePhotoManager = () => {
     setPhotoManagerOpen(false);
     setSelectedProduitForPhotos(null);
+  };
+
+  const openPreview = (src) => {
+    setPreviewSrc(src);
+    setIsZoomed(false);
+    setPreviewOpen(true);
+  };
+
+  const closePreview = () => {
+    setPreviewOpen(false);
+    setTimeout(() => setPreviewSrc(''), 200);
   };
 
   // Gérer le succès du formulaire
@@ -420,8 +434,10 @@ const BoutiquePage = () => {
                       height: '60px',
                       objectFit: 'cover',
                       borderRadius: '8px',
-                      border: '2px solid rgba(16,185,129,0.3)'
+                      border: '2px solid rgba(16,185,129,0.3)',
+                      cursor: 'zoom-in'
                     }}
+                    onClick={() => openPreview(produit.image)}
                     onError={(e) => {
                       console.error('Erreur de chargement image:', produit.nom, 'Image src:', produit.image.substring(0, 50));
                       // En cas d'erreur, générer une image de fallback
@@ -589,6 +605,14 @@ const BoutiquePage = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+      {previewOpen && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000,padding:20}} onClick={closePreview}>
+          <div style={{position:'relative',maxWidth:'90vw',maxHeight:'90vh'}} onClick={(e)=>e.stopPropagation()}>
+            <img src={previewSrc} alt="Aperçu produit" style={{maxWidth:'90vw',maxHeight:'90vh',objectFit:'contain',transition:'transform 0.2s ease', transform: isZoomed ? 'scale(1.8)' : 'scale(1)'}} onClick={()=>setIsZoomed(!isZoomed)} />
+            <button onClick={closePreview} style={{position:'absolute',top:-10,right:-10,background:'rgba(255,255,255,0.15)',color:'#fff',border:'1px solid rgba(255,255,255,0.3)',padding:'6px 10px',borderRadius:20,cursor:'pointer',backdropFilter:'blur(6px)'}}>✕</button>
+          </div>
+        </div>
+      )}
     </ModernPageTemplate>
   );
 };

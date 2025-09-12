@@ -85,10 +85,17 @@ const PiecesPage = ({ readOnly = false }) => {
     }
   };
 
-  // Charger réparations pour sélection (mode mécano)
+  // Charger réparations pour sélection (mode mécano uniquement)
   useEffect(() => {
     const loadReps = async () => {
       if (!readOnly) return;
+      try {
+        const u = JSON.parse(localStorage.getItem('user') || '{}');
+        if (u.role !== 'mecanicien') {
+          // Ne pas appeler l'endpoint mécanicien pour les garages
+          return;
+        }
+      } catch {}
       try {
         const res = await reparationsAPI.getMecanicienReparations();
         const data = res.data || [];

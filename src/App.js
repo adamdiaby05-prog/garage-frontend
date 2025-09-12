@@ -23,11 +23,18 @@ import PrendreRdvPage from './pages/PrendreRdvPage';
 import MesReparationsPage from './pages/MesReparationsPage';
 import MesReparationsClientPage from './pages/MesReparationsClientPage';
 import MesFacturesPage from './pages/MesFacturesPage';
+import FacturesGaragePage from './pages/FacturesGaragePage';
+import FournisseurPage from './pages/FournisseurPage';
 import RendezVousMecanoPage from './pages/RendezVousMecanoPage';
 import PiecesMecanoPage from './pages/PiecesMecanoPage';
 import VehiculesMecanoPage from './pages/VehiculesMecanoPage';
 import AssistantIA from './pages/AssistantIA';
 import CommandesPage from './pages/CommandesPage';
+// Nouvelles pages pour le système de prestations
+import DemandesPrestationsPage from './pages/DemandesPrestationsPage';
+import DemanderPrestationPage from './pages/DemanderPrestationPage';
+import GarageDemandesPage from './pages/GarageDemandesPage';
+import GaragesPage from './pages/GaragesPage';
 
 // Pages de base pour les autres sections
 const PlaceholderPage = ({ title, description }) => (
@@ -53,8 +60,8 @@ const App = () => {
     
     try {
       const userData = JSON.parse(raw);
-      // Vérifier que l'utilisateur a un rôle valide
-      if (!userData.role || !['admin', 'mecanicien', 'client'].includes(userData.role)) {
+      // Vérifier que l'utilisateur a un rôle valide (inclure garage)
+      if (!userData.role || !['admin', 'mecanicien', 'garage', 'client'].includes(userData.role)) {
         return null;
       }
       return userData;
@@ -102,7 +109,7 @@ const App = () => {
     
     try {
       const userData = JSON.parse(storedUser);
-      if (!userData.role || !['admin', 'mecanicien', 'client'].includes(userData.role)) {
+      if (!userData.role || !['admin', 'mecanicien', 'garage', 'client'].includes(userData.role)) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setUser(null);
@@ -142,6 +149,7 @@ const App = () => {
   const roleHome = useMemo(() => ({
     admin: '/dashboard',
     mecanicien: '/dashboard',
+    garage: '/dashboard',
     client: '/dashboard',
   }), []);
 
@@ -150,7 +158,10 @@ const App = () => {
     const stored = localStorage.getItem('user');
     const currentUser = stored ? JSON.parse(stored) : null;
     if (!token) return <Navigate to="/login" replace />;
-    if (roles && currentUser && !roles.includes(currentUser.role)) return <Navigate to={roleHome[currentUser.role] || '/dashboard'} replace />;
+    if (roles && currentUser && !roles.includes(currentUser.role)) {
+      const role = currentUser.role || 'client';
+      return <Navigate to={`/dashboard/${role}`} replace />;
+    }
     return element;
   };
 
@@ -230,6 +241,7 @@ const App = () => {
               } />
               <Route path="/dashboard/admin" element={<ProtectedRoute element={<Dashboard userRole="admin" />} roles={[ 'admin' ]} />} />
               <Route path="/dashboard/mecanicien" element={<ProtectedRoute element={<Dashboard userRole="mecanicien" />} roles={[ 'mecanicien' ]} />} />
+              <Route path="/dashboard/garage" element={<ProtectedRoute element={<Dashboard userRole="garage" />} roles={[ 'garage' ]} />} />
               <Route path="/dashboard/client" element={<ProtectedRoute element={<Dashboard userRole="client" />} roles={[ 'client' ]} />} />
               
               {/* Routes Admin */}
@@ -242,23 +254,31 @@ const App = () => {
               <Route path="/fournisseurs" element={<ProtectedRoute element={<FournisseursPage />} roles={[ 'admin' ]} />} />
               <Route path="/services" element={<ProtectedRoute element={<ServicesPage />} roles={[ 'admin' ]} />} />
               <Route path="/rendez-vous" element={<ProtectedRoute element={<RendezVousPage userRole={userRole} />} roles={[ 'admin', 'mecanicien', 'client' ]} />} />
+              <Route path="/demandes-prestations" element={<ProtectedRoute element={<DemandesPrestationsPage />} roles={[ 'admin' ]} />} />
+              <Route path="/garages" element={<ProtectedRoute element={<GaragesPage />} roles={[ 'admin' ]} />} />
               <Route path="/boutique" element={<ProtectedRoute element={<BoutiquePage />} roles={[ 'admin' ]} />} />
               <Route path="/commandes" element={<ProtectedRoute element={<CommandesPage />} roles={[ 'admin' ]} />} />
               <Route path="/boutique-client" element={<BoutiqueClientPage />} />
               <Route path="/assistant-ia" element={<ProtectedRoute element={<AssistantIA />} roles={[ 'admin', 'mecanicien' ]} />} />
               
-              {/* Routes Mécanicien */}
-              <Route path="/mes-reparations" element={<ProtectedRoute element={<MesReparationsPage />} roles={[ 'mecanicien', 'client', 'admin' ]} />} />
-              <Route path="/rendez-vous-mecano" element={<ProtectedRoute element={<RendezVousMecanoPage />} roles={[ 'mecanicien' ]} />} />
-              <Route path="/pieces-mecano" element={<ProtectedRoute element={<PiecesMecanoPage />} roles={[ 'mecanicien' ]} />} />
-              <Route path="/vehicules-mecano" element={<ProtectedRoute element={<VehiculesMecanoPage />} roles={[ 'mecanicien' ]} />} />
+              {/* Routes Garage */}
+              <Route path="/mes-reparations" element={<ProtectedRoute element={<MesReparationsPage />} roles={[ 'garage', 'admin' ]} />} />
+              <Route path="/rendez-vous-garage" element={<ProtectedRoute element={<RendezVousMecanoPage />} roles={[ 'garage' ]} />} />
+              <Route path="/pieces-garage" element={<ProtectedRoute element={<PiecesMecanoPage />} roles={[ 'garage' ]} />} />
+              <Route path="/vehicules-garage" element={<ProtectedRoute element={<VehiculesMecanoPage />} roles={[ 'garage' ]} />} />
+              
+              {/* Routes Garage */}
+              <Route path="/garage-demandes" element={<ProtectedRoute element={<GarageDemandesPage />} roles={[ 'garage' ]} />} />
+              <Route path="/factures-garage" element={<ProtectedRoute element={<FacturesGaragePage />} roles={[ 'garage' ]} />} />
+              <Route path="/fournisseur" element={<ProtectedRoute element={<FournisseurPage />} roles={[ 'garage' ]} />} />
               
               {/* Routes Client */}
               <Route path="/mes-vehicules" element={<ProtectedRoute element={<MesVehiculesPage />} roles={[ 'client' ]} />} />
               <Route path="/mes-reparations" element={<ProtectedRoute element={<MesReparationsPage />} roles={[ 'client' ]} />} />
-              <Route path="/mes-factures" element={<ProtectedRoute element={<MesFacturesPage />} roles={[ 'client' ]} />} />
+              <Route path="/mes-factures" element={<ProtectedRoute element={<MesFacturesPage />} roles={[ 'client', 'garage' ]} />} />
               <Route path="/mes-reparations-client" element={<ProtectedRoute element={<MesReparationsClientPage />} roles={[ 'client' ]} />} />
               <Route path="/prendre-rdv" element={<ProtectedRoute element={<PrendreRdvPage />} roles={[ 'client' ]} />} />
+              <Route path="/demander-prestation" element={<ProtectedRoute element={<DemanderPrestationPage />} roles={[ 'client' ]} />} />
               
               {/* Route par défaut */}
               <Route path="*" element={

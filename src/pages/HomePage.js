@@ -1,303 +1,1001 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Button, Container, Typography, Stack, Card, CardContent, IconButton, Divider } from '@mui/material';
-import { DirectionsCar, Build, Security, Login, PersonAdd, ShoppingCart, Settings, Menu as MenuIcon, Close, AutoAwesome, Bolt, ArrowRightAlt } from '@mui/icons-material';
+import React, { useEffect, useState } from 'react';
+import { DirectionsCar, Build, Security, Login, PersonAdd, ShoppingCart, Menu as MenuIcon, Close, Star, Verified, Speed, Shield, Bolt, ArrowForward, PlayArrow } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
 const HomePage = () => {
   const navigate = useNavigate();
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [particles, setParticles] = useState([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [carPosition, setCarPosition] = useState(0);
-  const [carSpeed, setCarSpeed] = useState(2);
-  const [smokeParticles, setSmokeParticles] = useState([]);
-  const [hoverKey, setHoverKey] = useState(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [particles, setParticles] = useState([]);
+  const [hoveredBadge, setHoveredBadge] = useState(null);
   const [scrollY, setScrollY] = useState(0);
-  const carRef = useRef(null);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCarPosition((prev) => {
-        const next = prev >= window.innerWidth + 100 ? -200 : prev + carSpeed;
-        if (prev > -150 && prev < window.innerWidth + 150) {
-          setSmokeParticles((smoke) => [
-            ...smoke.slice(-40),
-            {
-              id: Date.now() + Math.random(),
-              x: prev - 12 + Math.random() * 6,
-              y: window.innerHeight - 110 + Math.random() * 14,
-              size: Math.random() * 8 + 6,
-              opacity: 0.6,
-              life: 0
-            }
-          ]);
-        }
-        return next;
-      });
-    }, 50);
-    return () => clearInterval(interval);
-  }, [carSpeed]);
+  // Images pour le carousel
+  const carouselImages = [
+    'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&h=600&fit=crop',
+    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop',
+    'https://images.unsplash.com/photo-1563720223185-11003d516935?w=800&h=600&fit=crop',
+    'https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=800&h=600&fit=crop'
+  ];
 
-  useEffect(() => {
-    const smokeInterval = setInterval(() => {
-      setSmokeParticles((smoke) =>
-        smoke
-          .map((p) => ({
-            ...p,
-            y: p.y - 2,
-            x: p.x + (Math.random() - 0.5) * 2,
-            life: p.life + 1,
-            opacity: Math.max(0, p.opacity - 0.02),
-            size: p.size + 0.25
-          }))
-          .filter((p) => p.life < 60 && p.opacity > 0)
-      );
-    }, 50);
-    return () => clearInterval(smokeInterval);
-  }, []);
+  // Badges 3D avec animations
+  const badges3D = [
+    { 
+      icon: <Verified />, 
+      title: 'Certifié Premium', 
+      subtitle: '5 étoiles',
+      color: '#00ff88',
+      glow: 'rgba(0, 255, 136, 0.5)',
+      rotation: '12deg'
+    },
+    { 
+      icon: <Speed />, 
+      title: 'Service Rapide', 
+      subtitle: '24h/7j',
+      color: '#00ff88',
+      glow: 'rgba(0, 255, 136, 0.5)',
+      rotation: '-8deg'
+    },
+    { 
+      icon: <Shield />, 
+      title: 'Garantie Totale', 
+      subtitle: '2 ans',
+      color: '#00ff88',
+      glow: 'rgba(0, 255, 136, 0.5)',
+      rotation: '15deg'
+    }
+  ];
 
+  // Features avec effets 3D
+  const features = [
+    { 
+      icon: <DirectionsCar />, 
+      title: 'Gestion Intelligente', 
+      description: 'IA avancée pour optimiser vos véhicules',
+      gradient: 'linear-gradient(135deg, #00ff88, #00cc6a)'
+    },
+    { 
+      icon: <Build />, 
+      title: 'Réparations Express', 
+      description: 'Diagnostic en temps réel et solutions rapides',
+      gradient: 'linear-gradient(135deg, #00ff88, #00aa55)'
+    },
+    { 
+      icon: <Security />, 
+      title: 'Sécurité Maximale', 
+      description: 'Cryptage militaire et protection totale',
+      gradient: 'linear-gradient(135deg, #00ff88, #008844)'
+    }
+  ];
+
+  // Initialisation des particules
   useEffect(() => {
-    const initial = Array.from({ length: 30 }, (_, i) => ({
+    const initialParticles = Array.from({ length: 50 }, (_, i) => ({
       id: i,
       x: Math.random() * window.innerWidth,
       y: Math.random() * window.innerHeight,
-      z: Math.random() * 1000,
-      size: Math.random() * 4 + 2,
-      speedX: (Math.random() - 0.5) * 3,
-      speedY: (Math.random() - 0.5) * 3,
-      speedZ: Math.random() * 2 + 1,
-      opacity: Math.random() * 0.8 + 0.2,
-      color: ['#60A5FA', '#3B82F6', '#1D4ED8', '#93C5FD'][Math.floor(Math.random() * 4)],
+      size: Math.random() * 3 + 1,
+      speedX: (Math.random() - 0.5) * 2,
+      speedY: (Math.random() - 0.5) * 2,
+      opacity: Math.random() * 0.5 + 0.2,
+      color: ['#00ff88', '#00cc6a', '#00aa55'][Math.floor(Math.random() * 3)]
     }));
-    setParticles(initial);
-    const interval = setInterval(() => {
-      setParticles((prev) => prev.map((p) => ({
+    setParticles(initialParticles);
+
+    const animateParticles = () => {
+      setParticles(prev => prev.map(p => ({
         ...p,
-        x: p.x + p.speedX,
-        y: p.y + p.speedY,
-        z: p.z + p.speedZ,
-        x: p.x > window.innerWidth ? -50 : p.x < -50 ? window.innerWidth : p.x,
-        y: p.y > window.innerHeight ? -50 : p.y < -50 ? window.innerHeight : p.y,
-        z: p.z > 1000 ? 0 : p.z,
+        x: (p.x + p.speedX) > window.innerWidth ? 0 : (p.x + p.speedX) < 0 ? window.innerWidth : p.x + p.speedX,
+        y: (p.y + p.speedY) > window.innerHeight ? 0 : (p.y + p.speedY) < 0 ? window.innerHeight : p.y + p.speedY
       })));
-    }, 60);
+    };
+
+    const interval = setInterval(animateParticles, 50);
     return () => clearInterval(interval);
   }, []);
 
+  // Carousel automatique
   useEffect(() => {
-    const onMove = (e) => setMousePosition({ x: e.clientX, y: e.clientY });
-    const onScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('scroll', onScroll);
+    const interval = setInterval(() => {
+      setCurrentImageIndex(prev => (prev + 1) % carouselImages.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [carouselImages.length]);
+
+  // Mouse tracking
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+    
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('scroll', handleScroll);
     return () => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('scroll', handleScroll);
     };
   }, []);
 
-  const features = useMemo(() => ([
-    { icon: <DirectionsCar />, title: 'Gestion de véhicules', description: 'Ajoutez, suivez et mettez à jour vos véhicules en temps réel.' },
-    { icon: <Build />, title: 'Suivi des réparations', description: "Consultez l'historique complet et l'état de vos réparations." },
-    { icon: <Security />, title: 'Espace sécurisé', description: 'Vos données sont protégées et sauvegardées en temps réel.' },
-  ]), []);
-
   return (
-    <Box sx={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #0c1445 0%, #1e3a8a 25%, #1d4ed8 50%, #2563eb 75%, #0c1445 100%)' }}>
-      {/* Header */}
-      <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50, background: 'rgba(12,20,69,0.85)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(59,130,246,0.3)' }}>
-        <Container maxWidth="lg" sx={{ py: 1.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer' }} onClick={() => navigate('/') }>
-              <Box sx={{ position: 'relative' }}>
-                <Box sx={{ width: 48, height: 48, background: 'linear-gradient(90deg, #1e3a8a, #6d28d9)', borderRadius: 2, transform: 'rotate(12deg)', boxShadow: '0 10px 25px rgba(59,130,246,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Box sx={{ position: 'absolute', inset: 6, backgroundColor: 'white', borderRadius: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Settings sx={{ color: '#1976d2', animation: 'spin 6s linear infinite' }} />
-                  </Box>
-                </Box>
-              </Box>
-              <Box sx={{ color: 'white' }}>
-                <Typography variant="h5" sx={{ fontWeight: 900, background: 'linear-gradient(90deg, #fff, #93c5fd)', WebkitBackgroundClip: 'text', color: 'transparent' }}>AutoGenius</Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>Garage Management</Typography>
-              </Box>
-            </Box>
-            <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 3 }}>
-              {['Accueil', 'Services', 'À propos', 'Contact'].map((item) => (
-                <Typography key={item} sx={{ color: 'rgba(255,255,255,0.8)', cursor: 'pointer', '&:hover': { color: '#fff' } }}>{item}</Typography>
+    <div className="homepage-container">
+      {/* Particules flottantes */}
+      {particles.map(particle => (
+        <div
+          key={particle.id}
+          className="particle"
+          style={{
+            left: particle.x,
+            top: particle.y,
+            width: particle.size,
+            height: particle.size,
+            backgroundColor: particle.color,
+            opacity: particle.opacity,
+            boxShadow: `0 0 ${particle.size * 4}px ${particle.color}`
+          }}
+        />
+      ))}
+
+      {/* Effet de cursor glow */}
+      <div 
+        className="cursor-glow"
+        style={{
+          left: mousePosition.x - 150,
+          top: mousePosition.y - 150,
+        }}
+      />
+
+      {/* Header avec animation */}
+      <header className={`header ${scrollY > 50 ? 'scrolled' : ''}`}>
+        <div className="container">
+          <div className="header-content">
+            <div className="logo-section" onClick={() => navigate('/')}>
+              <div className="logo-icon">
+                <div className="logo-inner">
+                  <DirectionsCar className="logo-car" />
+                </div>
+              </div>
+              <div className="logo-text">
+                <h1>AutoGenius</h1>
+                <span>Dark Edition</span>
+              </div>
+            </div>
+            
+            <nav className="desktop-nav">
+              {['Accueil', 'Services', 'À propos', 'Contact'].map(item => (
+                <button key={item} className="nav-link" onClick={() => console.log(`Navigate to ${item}`)}>{item}</button>
               ))}
-            </Box>
-            <IconButton sx={{ display: { xs: 'inline-flex', md: 'none' }, color: 'white' }} onClick={() => setIsMenuOpen((v) => !v)}>
+            </nav>
+            
+            <button 
+              className="mobile-menu-btn"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
               {isMenuOpen ? <Close /> : <MenuIcon />}
-            </IconButton>
-          </Box>
-        </Container>
+            </button>
+          </div>
+        </div>
+        
+        {/* Menu mobile */}
         {isMenuOpen && (
-          <Box sx={{ display: { xs: 'block', md: 'none' }, background: 'rgba(12,20,69,0.95)', borderTop: '1px solid rgba(59,130,246,0.3)' }}>
-            <Container maxWidth="lg" sx={{ py: 2 }}>
-              <Stack spacing={1.5}>
-                {['Accueil', 'Services', 'À propos', 'Contact'].map((item) => (
-                  <Typography key={item} sx={{ color: 'rgba(255,255,255,0.8)' }}>{item}</Typography>
-                ))}
-              </Stack>
-            </Container>
-          </Box>
+          <div className="mobile-menu">
+            {['Accueil', 'Services', 'À propos', 'Contact'].map(item => (
+              <button key={item} className="mobile-nav-link" onClick={() => console.log(`Navigate to ${item}`)}>{item}</button>
+            ))}
+          </div>
         )}
-      </Box>
+      </header>
 
-      {/* Gradient + parallax */}
-      <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(37,99,235,0.25), rgba(59,130,246,0.2), rgba(96,165,250,0.15))', transform: `translateY(${scrollY * 0.5}px)` }} />
-
-      {/* Particles */}
-      {particles.map((p) => (
-        <Box key={p.id} sx={{ position: 'absolute', left: p.x, top: p.y, width: ((p.size * (1000 - p.z)) / 1000), height: ((p.size * (1000 - p.z)) / 1000), backgroundColor: p.color, borderRadius: '50%', pointerEvents: 'none', opacity: (p.opacity * (1000 - p.z)) / 1000, transform: 'translate(-50%, -50%)' }} />
-      ))}
-
-      {/* Car with interactive boost */}
-      <Box ref={carRef} onClick={() => {
-        setCarSpeed((s) => Math.min(8, s + 2));
-        setTimeout(() => setCarSpeed(2), 1200);
-      }} sx={{ position: 'fixed', bottom: 80, zIndex: 30, left: carPosition, cursor: 'pointer', filter: 'drop-shadow(0 10px 20px rgba(59,130,246,0.5))', transform: carSpeed > 2 ? 'scale(1.08)' : 'scale(1)', transition: 'transform .2s ease' }}>
-        <Box sx={{ position: 'relative' }}>
-          <DirectionsCar sx={{ width: 64, height: 64, color: '#60A5FA', animation: 'bounce 2s infinite' }} />
-          <Box sx={{ position: 'absolute', bottom: -6, left: 8, width: 10, height: 10, backgroundColor: '#0f172a', borderRadius: '50%', animation: 'spin 2s linear infinite' }} />
-          <Box sx={{ position: 'absolute', bottom: -6, right: 8, width: 10, height: 10, backgroundColor: '#0f172a', borderRadius: '50%', animation: 'spin 2s linear infinite' }} />
-          <Box sx={{ position: 'absolute', inset: -16, backgroundColor: 'rgba(59,130,246,0.25)', filter: 'blur(20px)', borderRadius: '999px' }} />
-        </Box>
-      </Box>
-
-      {/* Exhaust smoke particles */}
-      {smokeParticles.map((smoke) => (
-        <Box key={smoke.id} sx={{ position: 'fixed', left: smoke.x, top: smoke.y, width: smoke.size, height: smoke.size, backgroundColor: 'rgba(148,163,184,0.8)', borderRadius: '50%', opacity: smoke.opacity, pointerEvents: 'none', transform: 'translate(-50%, -50%)', filter: 'blur(2px)' }} />
-      ))}
-
-      {/* Cursor glow */}
-      <Box sx={{ position: 'fixed', width: 384, height: 384, borderRadius: '999px', background: 'radial-gradient(circle, rgba(96,165,250,0.2), rgba(59,130,246,0.12), transparent)', pointerEvents: 'none', filter: 'blur(40px)', left: mousePosition.x - 192, top: mousePosition.y - 192, zIndex: 10 }} />
-
-      {/* Main content */}
-      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 20, py: 10, pt: 16, minHeight: '100vh', display: 'flex', alignItems: 'center' }}>
-        <Box sx={{ width: '100%' }}>
-          <Stack direction={{ xs: 'column', lg: 'row' }} spacing={8} alignItems="center" justifyContent="space-between">
-            <Box sx={{ flex: 1, maxWidth: 720, textAlign: { xs: 'center', lg: 'left' } }}>
-              <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1.5, px: 3, py: 1.5, borderRadius: 999, mb: 4, background: 'linear-gradient(90deg, rgba(59,130,246,0.2), rgba(29,78,216,0.2))', border: '1px solid rgba(96,165,250,0.4)', color: 'white' }}>
-                <AutoAwesome sx={{ color: '#facc15' }} />
-                <Typography variant="body1">✨ Bienvenue dans le Futur Automobile</Typography>
-              </Box>
-              <Typography variant="h2" sx={{ fontWeight: 900, mb: 2, lineHeight: 1.1, background: 'linear-gradient(90deg, #fff, #bfdbfe)', WebkitBackgroundClip: 'text', color: 'transparent' }}>
-                Votre véhicule,
-              </Typography>
-              <Typography variant="h2" sx={{ fontWeight: 900, mb: 3, lineHeight: 1.1, background: 'linear-gradient(90deg, #60a5fa, #3b82f6, #93c5fd)', WebkitBackgroundClip: 'text', color: 'transparent' }}>
-                notre expertise
-              </Typography>
-              <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.9)', mb: 5, fontWeight: 300 }}>
-                Révolutionnez la gestion de vos véhicules avec une technologie
-                <Box component="span" sx={{ color: '#60a5fa', fontWeight: 600 }}> ultra-moderne</Box> et des
-                <Box component="span" sx={{ color: '#60a5fa', fontWeight: 600 }}> services premium</Box>.
-              </Typography>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 4 }}>
-                <Button
-                  size="large"
-                  variant="contained"
-                  onMouseEnter={() => setHoverKey('signup')}
-                  onMouseLeave={() => setHoverKey(null)}
-                  onClick={() => navigate('/signup')}
-                  startIcon={<PersonAdd />}
-                  sx={{
-                    px: 4,
-                    py: 1.5,
-                    borderRadius: 6,
-                    fontWeight: 'bold',
-                    background: 'linear-gradient(90deg, #2563eb, #1d4ed8)',
-                    '&:hover': { transform: 'translateY(-6px) scale(1.05)', transition: 'all .3s ease' }
-                  }}
-                >
-                  Créer un compte
-                  <ArrowRightAlt sx={{ ml: 1, transform: hoverKey === 'signup' ? 'translateX(8px)' : 'none', transition: 'transform .2s' }} />
-                </Button>
-                <Button
-                  size="large"
-                  variant="outlined"
-                  color="inherit"
-                  onClick={() => navigate('/login')}
-                  startIcon={<Login />}
-                  sx={{
-                    px: 4,
-                    py: 1.5,
-                    borderRadius: 6,
-                    borderColor: 'rgba(255,255,255,0.5)',
-                    color: 'white',
-                    backdropFilter: 'blur(10px)',
-                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
-                  }}
-                >
-                  Se connecter
-                </Button>
-              </Stack>
-              <Button
-                size="large"
-                variant="contained"
-                onClick={() => navigate('/boutique-client')}
-                startIcon={<ShoppingCart />}
-                sx={{
-                  px: 4,
-                  py: 1.5,
-                  borderRadius: 6,
-                  fontWeight: 'bold',
-                  background: 'linear-gradient(90deg, #059669, #0d9488)',
-                  '&:hover': { transform: 'translateY(-6px) scale(1.05)', transition: 'all .3s ease' }
-                }}
-              >
-                Boutique Premium
-                <Bolt sx={{ ml: 1, color: '#fde047' }} />
-              </Button>
-            </Box>
-
-            <Box sx={{ flex: 1, maxWidth: 520, width: '100%' }}>
-              <Stack spacing={3}>
-                {features.map((f, idx) => (
-                  <Card key={idx} sx={{ position: 'relative', p: 2, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 4, backdropFilter: 'blur(16px)', transition: 'all .3s', '&:hover': { transform: 'translateY(-8px) scale(1.04)', background: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.4)' } }}>
-                    <CardContent>
-                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                        <Box sx={{ p: 1.5, borderRadius: 3, background: 'linear-gradient(90deg, rgba(59,130,246,0.4), rgba(59,130,246,0.25))' }}>
-                          {f.icon}
-                        </Box>
-                        <Box>
-                          <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 0.5 }}>{f.title}</Typography>
-                          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)' }}>{f.description}</Typography>
-                        </Box>
-                      </Box>
-                    </CardContent>
-                  </Card>
+      {/* Section principale */}
+      <main className="main-section">
+        <div className="container">
+          <div className="hero-grid">
+            {/* Contenu principal */}
+            <div className="hero-content">
+              {/* Badges 3D flottants */}
+              <div className="badges-container">
+                {badges3D.map((badge, index) => (
+                  <div 
+                    key={index}
+                    className={`badge-3d ${hoveredBadge === index ? 'hovered' : ''}`}
+                    style={{
+                      transform: `rotate(${badge.rotation}) translateY(${Math.sin(Date.now() / 1000 + index) * 10}px)`,
+                      boxShadow: `0 20px 40px ${badge.glow}, inset 0 0 20px rgba(255,255,255,0.1)`
+                    }}
+                    onMouseEnter={() => setHoveredBadge(index)}
+                    onMouseLeave={() => setHoveredBadge(null)}
+                  >
+                    <div className="badge-icon" style={{ color: badge.color }}>
+                      {badge.icon}
+                    </div>
+                    <div className="badge-text">
+                      <div className="badge-title">{badge.title}</div>
+                      <div className="badge-subtitle">{badge.subtitle}</div>
+                    </div>
+                    <div className="badge-glow" style={{ background: badge.glow }} />
+                  </div>
                 ))}
-              </Stack>
-            </Box>
-          </Stack>
-        </Box>
-      </Container>
+              </div>
+
+              <div className="hero-text">
+                <div className="welcome-badge">
+                  <Star className="star-icon" />
+                  <span>Bienvenue dans l'Ère Digitale</span>
+                </div>
+                
+                <h1 className="hero-title">
+                  <span className="title-line">Votre véhicule,</span>
+                  <span className="title-line neon">notre génie</span>
+                </h1>
+                
+                <p className="hero-description">
+                  Révolutionnez la gestion automobile avec notre 
+                  <span className="highlight"> technologie IA </span> 
+                  et des services 
+                  <span className="highlight"> premium ultra-modernes</span>.
+                </p>
+                
+                <div className="cta-buttons">
+                  <button className="btn-primary" onClick={() => navigate('/signup')}>
+                    <PersonAdd />
+                    <span>Créer un compte</span>
+                    <ArrowForward className="arrow-icon" />
+                  </button>
+                  
+                  <button className="btn-secondary" onClick={() => navigate('/login')}>
+                    <Login />
+                    <span>Se connecter</span>
+                  </button>
+                </div>
+                
+                <button className="btn-shop" onClick={() => navigate('/boutique-client')}>
+                  <ShoppingCart />
+                  <span>Boutique Premium</span>
+                  <Bolt className="bolt-icon" />
+                </button>
+              </div>
+            </div>
+
+            {/* Carousel d'images */}
+            <div className="carousel-section">
+              <div className="carousel-container">
+                <div className="carousel-wrapper">
+                  {carouselImages.map((image, index) => (
+                    <div 
+                      key={index}
+                      className={`carousel-slide ${index === currentImageIndex ? 'active' : ''}`}
+                      style={{ backgroundImage: `url(${image})` }}
+                    />
+                  ))}
+                </div>
+                
+                <div className="carousel-dots">
+                  {carouselImages.map((_, index) => (
+                    <button 
+                      key={index}
+                      className={`dot ${index === currentImageIndex ? 'active' : ''}`}
+                      onClick={() => setCurrentImageIndex(index)}
+                    />
+                  ))}
+                </div>
+                
+                <div className="carousel-overlay">
+                  <PlayArrow className="play-icon" />
+                  <span>Découvrir nos services</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Section des fonctionnalités */}
+      <section className="features-section">
+        <div className="container">
+          <div className="features-grid">
+            {features.map((feature, index) => (
+              <div key={index} className="feature-card">
+                <div className="feature-icon" style={{ background: feature.gradient }}>
+                  {feature.icon}
+                </div>
+                <h3 className="feature-title">{feature.title}</h3>
+                <p className="feature-description">{feature.description}</p>
+                <div className="feature-glow" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Footer */}
-      <Box sx={{ position: 'relative', zIndex: 20, borderTop: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.2)' }}>
-        <Container maxWidth="lg" sx={{ py: 3 }}>
-          <Box sx={{ textAlign: 'center', color: 'white' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1.5, mb: 1 }}>
-              <Box sx={{ width: 32, height: 32, background: 'linear-gradient(90deg, #1e3a8a, #2563eb)', borderRadius: 1, transform: 'rotate(12deg)', animation: 'spin 6s linear infinite' }} />
-              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>AutoGenius</Typography>
-            </Box>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-              © {new Date().getFullYear()} AutoGenius - L'avenir du garage management 🚗
-            </Typography>
-          </Box>
-        </Container>
-      </Box>
+      <footer className="footer">
+        <div className="container">
+          <div className="footer-content">
+            <div className="footer-logo">
+              <div className="footer-logo-icon">
+                <DirectionsCar />
+              </div>
+              <span>AutoGenius</span>
+            </div>
+            <p>© 2024 AutoGenius - L'avenir du garage management 🚗</p>
+          </div>
+        </div>
+      </footer>
 
-      {/* keyframes */}
       <style>{`
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes gradientShift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        .homepage-container {
+          min-height: 100vh;
+          background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+          color: white;
+          overflow-x: hidden;
+          position: relative;
+        }
+
+        /* Particules */
+        .particle {
+          position: fixed;
+          border-radius: 50%;
+          pointer-events: none;
+          z-index: 1;
+          animation: float 6s ease-in-out infinite;
+        }
+
+        .cursor-glow {
+          position: fixed;
+          width: 300px;
+          height: 300px;
+          background: radial-gradient(circle, rgba(0, 255, 136, 0.15), transparent);
+          border-radius: 50%;
+          pointer-events: none;
+          z-index: 2;
+          filter: blur(30px);
+          transition: all 0.1s ease;
+        }
+
+        /* Header */
+        .header {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 100;
+          background: rgba(10, 10, 10, 0.8);
+          backdrop-filter: blur(20px);
+          border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+          transition: all 0.3s ease;
+        }
+
+        .header.scrolled {
+          background: rgba(10, 10, 10, 0.95);
+          border-bottom: 1px solid rgba(0, 255, 136, 0.4);
+        }
+
+        .container {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 0 20px;
+        }
+
+        .header-content {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 15px 0;
+        }
+
+        .logo-section {
+          display: flex;
+          align-items: center;
+          gap: 15px;
+          cursor: pointer;
+        }
+
+        .logo-icon {
+          width: 50px;
+          height: 50px;
+          background: linear-gradient(135deg, #00ff88, #00aa55);
+          border-radius: 15px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transform: rotate(12deg);
+          box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
+          animation: logoFloat 4s ease-in-out infinite;
+        }
+
+        .logo-inner {
+          background: rgba(255, 255, 255, 0.9);
+          border-radius: 10px;
+          padding: 8px;
+        }
+
+        .logo-car {
+          color: #00aa55;
+        }
+
+        .logo-text h1 {
+          margin: 0;
+          font-size: 24px;
+          font-weight: 900;
+          background: linear-gradient(90deg, #fff, #00ff88);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .logo-text span {
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.6);
+        }
+
+        .desktop-nav {
+          display: flex;
+          gap: 30px;
+        }
+
+        .nav-link {
+          color: rgba(255, 255, 255, 0.8);
+          text-decoration: none;
+          font-weight: 500;
+          transition: all 0.3s ease;
+          position: relative;
+          background: none;
+          border: none;
+          font-size: 16px;
+          cursor: pointer;
+        }
+
+        .nav-link:hover {
+          color: #00ff88;
+          transform: translateY(-2px);
+        }
+
+        .nav-link::after {
+          content: '';
+          position: absolute;
+          bottom: -5px;
+          left: 0;
+          width: 0;
+          height: 2px;
+          background: #00ff88;
+          transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::after {
+          width: 100%;
+        }
+
+        .mobile-menu-btn {
+          display: none;
+          background: none;
+          border: none;
+          color: white;
+          font-size: 24px;
+          cursor: pointer;
+        }
+
+        .mobile-menu {
+          background: rgba(10, 10, 10, 0.95);
+          border-top: 1px solid rgba(0, 255, 136, 0.2);
+          padding: 20px;
+        }
+
+        .mobile-nav-link {
+          display: block;
+          color: rgba(255, 255, 255, 0.8);
+          text-decoration: none;
+          padding: 10px 0;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          background: none;
+          border: none;
+          width: 100%;
+          text-align: left;
+          cursor: pointer;
+        }
+
+        /* Section principale */
+        .main-section {
+          padding-top: 120px;
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          position: relative;
+          z-index: 10;
+        }
+
+        .hero-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 60px;
+          align-items: center;
+        }
+
+        /* Badges 3D */
+        .badges-container {
+          position: absolute;
+          top: -50px;
+          right: -50px;
+          z-index: 5;
+        }
+
+        .badge-3d {
+          position: absolute;
+          width: 120px;
+          height: 80px;
+          background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(20, 20, 20, 0.9));
+          border-radius: 15px;
+          border: 1px solid rgba(0, 255, 136, 0.4);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          backdrop-filter: blur(10px);
+          animation: badgeFloat 6s ease-in-out infinite;
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .badge-3d:nth-child(1) { top: 0; right: 0; animation-delay: 0s; }
+        .badge-3d:nth-child(2) { top: 100px; right: 80px; animation-delay: 2s; }
+        .badge-3d:nth-child(3) { top: 200px; right: 20px; animation-delay: 4s; }
+
+        .badge-3d.hovered {
+          transform: scale(1.1) translateY(-10px) !important;
+          box-shadow: 0 30px 60px rgba(0, 255, 136, 0.2) !important;
+          background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(30, 30, 30, 0.95)) !important;
+        }
+
+        .badge-icon {
+          font-size: 24px;
+        }
+
+        .badge-text {
+          flex: 1;
+        }
+
+        .badge-title {
+          font-size: 11px;
+          font-weight: 800;
+          color: #00ff88;
+          text-shadow: 0 0 8px rgba(0, 255, 136, 0.5);
+          line-height: 1.2;
+        }
+
+        .badge-subtitle {
+          font-size: 9px;
+          color: #ffffff;
+          font-weight: 600;
+          text-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+          line-height: 1.1;
+        }
+
+        .badge-glow {
+          position: absolute;
+          inset: -5px;
+          border-radius: 20px;
+          filter: blur(15px);
+          opacity: 0.3;
+          z-index: -1;
+        }
+
+        /* Hero content */
+        .hero-content {
+          position: relative;
+          z-index: 20;
+        }
+
+        .welcome-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: linear-gradient(90deg, rgba(0, 255, 136, 0.2), rgba(0, 170, 85, 0.2));
+          border: 1px solid rgba(0, 255, 136, 0.4);
+          border-radius: 50px;
+          padding: 10px 20px;
+          margin-bottom: 30px;
+          animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        .star-icon {
+          color: #ffff00;
+          animation: twinkle 1.5s ease-in-out infinite;
+        }
+
+        .hero-title {
+          font-size: 64px;
+          font-weight: 900;
+          line-height: 1.1;
+          margin: 0 0 30px 0;
+          position: relative;
+          z-index: 15;
+        }
+
+        .title-line {
+          display: block;
+          background: linear-gradient(90deg, #fff, rgba(255, 255, 255, 0.7));
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .title-line.neon {
+          color: #ffffff;
+          text-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.4);
+          -webkit-text-stroke: 1px rgba(255, 255, 255, 0.5);
+          z-index: 10;
+          position: relative;
+        }
+
+        .hero-description {
+          font-size: 18px;
+          line-height: 1.6;
+          color: rgba(255, 255, 255, 0.8);
+          margin-bottom: 40px;
+          max-width: 500px;
+        }
+
+        .highlight {
+          color: #00ff88;
+          font-weight: 600;
+          text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+
+        .cta-buttons {
+          display: flex;
+          gap: 20px;
+          margin-bottom: 30px;
+          flex-wrap: wrap;
+        }
+
+        .btn-primary, .btn-secondary, .btn-shop {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 15px 30px;
+          border-radius: 50px;
+          font-weight: 700;
+          text-decoration: none;
+          transition: all 0.3s ease;
+          cursor: pointer;
+          border: none;
+          font-size: 16px;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .btn-primary {
+          background: linear-gradient(135deg, #00ff88, #00aa55);
+          color: #000;
+          box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
+        }
+
+        .btn-primary:hover {
+          transform: translateY(-5px) scale(1.05);
+          box-shadow: 0 20px 40px rgba(0, 255, 136, 0.4);
+        }
+
+        .btn-secondary {
+          background: rgba(255, 255, 255, 0.1);
+          color: white;
+          border: 1px solid rgba(0, 255, 136, 0.3);
+          backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+          background: rgba(0, 255, 136, 0.1);
+          border-color: #00ff88;
+          transform: translateY(-3px);
+        }
+
+        .btn-shop {
+          background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+          color: white;
+          box-shadow: 0 10px 30px rgba(255, 107, 107, 0.3);
+        }
+
+        .btn-shop:hover {
+          transform: translateY(-5px) scale(1.05);
+          box-shadow: 0 20px 40px rgba(255, 107, 107, 0.4);
+        }
+
+        .arrow-icon, .bolt-icon {
+          transition: transform 0.3s ease;
+        }
+
+        .btn-primary:hover .arrow-icon {
+          transform: translateX(5px);
+        }
+
+        .btn-shop:hover .bolt-icon {
+          animation: bolt 0.5s ease-in-out;
+        }
+
+        /* Carousel */
+        .carousel-section {
+          position: relative;
+        }
+
+        .carousel-container {
+          position: relative;
+          width: 100%;
+          height: 500px;
+          border-radius: 25px;
+          overflow: hidden;
+          box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .carousel-wrapper {
+          position: relative;
+          width: 100%;
+          height: 100%;
+        }
+
+        .carousel-slide {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-size: cover;
+          background-position: center;
+          opacity: 0;
+          transition: all 1s ease-in-out;
+          transform: scale(1.1);
+        }
+
+        .carousel-slide.active {
+          opacity: 1;
+          transform: scale(1);
+        }
+
+        .carousel-dots {
+          position: absolute;
+          bottom: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          gap: 10px;
+          z-index: 10;
+        }
+
+        .dot {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.4);
+          border: none;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .dot.active {
+          background: #00ff88;
+          transform: scale(1.2);
+          box-shadow: 0 0 15px rgba(0, 255, 136, 0.6);
+        }
+
+        .carousel-overlay {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: rgba(0, 0, 0, 0.7);
+          color: white;
+          padding: 15px 25px;
+          border-radius: 50px;
+          backdrop-filter: blur(10px);
+          cursor: pointer;
+          transition: all 0.3s ease;
+          z-index: 10;
+        }
+
+        .carousel-overlay:hover {
+          background: rgba(0, 255, 136, 0.2);
+          transform: translate(-50%, -50%) scale(1.05);
+        }
+
+        .play-icon {
+          font-size: 24px;
+        }
+
+        /* Features section */
+        .features-section {
+          padding: 100px 0;
+          position: relative;
+          z-index: 10;
+        }
+
+        .features-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 30px;
+        }
+
+        .feature-card {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(0, 255, 136, 0.2);
+          border-radius: 20px;
+          padding: 30px;
+          text-align: center;
+          position: relative;
+          transition: all 0.3s ease;
+          backdrop-filter: blur(10px);
+        }
+
+        .feature-card:hover {
+          transform: translateY(-10px) scale(1.02);
+          border-color: #00ff88;
+          box-shadow: 0 20px 40px rgba(0, 255, 136, 0.2);
+        }
+
+        .feature-icon {
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 20px;
+          font-size: 32px;
+          color: white;
+          box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
+        }
+
+        .feature-title {
+          font-size: 24px;
+          font-weight: 700;
+          margin: 0 0 15px 0;
+          color: #00ff88;
+        }
+
+        .feature-description {
+          color: rgba(255, 255, 255, 0.8);
+          line-height: 1.6;
+          margin: 0;
+        }
+
+        .feature-glow {
+          position: absolute;
+          inset: -2px;
+          background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), transparent);
+          border-radius: 22px;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+          z-index: -1;
+        }
+
+        .feature-card:hover .feature-glow {
+          opacity: 1;
+        }
+
+        /* Footer */
+        .footer {
+          border-top: 1px solid rgba(0, 255, 136, 0.2);
+          background: rgba(0, 0, 0, 0.3);
+          padding: 30px 0;
+          position: relative;
+          z-index: 10;
+        }
+
+        .footer-content {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-direction: column;
+          gap: 15px;
+          text-align: center;
+        }
+
+        .footer-logo {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 20px;
+          font-weight: 700;
+          color: #00ff88;
+        }
+
+        .footer-logo-icon {
+          width: 30px;
+          height: 30px;
+          background: linear-gradient(135deg, #00ff88, #00aa55);
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+        }
+
+        /* Animations */
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
+        }
+
+        @keyframes logoFloat {
+          0%, 100% { transform: rotate(12deg) translateY(0px); }
+          50% { transform: rotate(12deg) translateY(-10px); }
+        }
+
+        @keyframes badgeFloat {
+          0%, 100% { transform: translateY(0px) rotate(var(--rotation, 0deg)); }
+          50% { transform: translateY(-15px) rotate(var(--rotation, 0deg)); }
+        }
+
+        @keyframes glow {
+          0% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.3); }
+          100% { box-shadow: 0 0 30px rgba(0, 255, 136, 0.6); }
+        }
+
+        @keyframes twinkle {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.7; transform: scale(1.1); }
+        }
+
+        @keyframes neonGlow {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+
+        @keyframes bolt {
+          0% { transform: rotate(0deg) scale(1); }
+          50% { transform: rotate(180deg) scale(1.2); }
+          100% { transform: rotate(360deg) scale(1); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+          .hero-grid {
+            grid-template-columns: 1fr;
+            gap: 40px;
+          }
+
+          .hero-title {
+            font-size: 48px;
+          }
+
+          .badges-container {
+            position: relative;
+            top: 0;
+            right: 0;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+          }
+
+          .badge-3d {
+            position: relative;
+            top: auto !important;
+            right: auto !important;
+            width: 100px;
+            height: 60px;
+          }
+
+          .desktop-nav {
+            display: none;
+          }
+
+          .mobile-menu-btn {
+            display: block;
+          }
+
+          .carousel-container {
+            height: 300px;
+          }
+        }
       `}</style>
-    </Box>
+    </div>
   );
 };
 
 export default HomePage;
-
-

@@ -54,6 +54,7 @@ const upload = multer({
 const allowedOrigins = new Set([
   'http://localhost:3000',
   'http://localhost:3002',
+  'http://localhost:3003',
   process.env.FRONTEND_ORIGIN || ''
 ].filter(Boolean));
 
@@ -882,9 +883,61 @@ async function ensureUsersTable() {
     try { await pool.execute("ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS telephone VARCHAR(30) NULL"); } catch {}
     try { await pool.execute("ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS type_compte VARCHAR(20) NULL"); } catch {}
     try { await pool.execute("ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS client_id INT NULL"); } catch {}
+    try { await pool.execute("ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS garage_id INT NULL"); } catch {}
+    try { await pool.execute("ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS role_garage ENUM('proprietaire', 'employe') NULL"); } catch {}
     console.log('✅ Table utilisateurs vérifiée/créée');
   } catch (error) {
     console.error('❌ Erreur lors de la création de la table utilisateurs:', error.message);
+  }
+}
+
+// Créer les tables garages et demandes_prestations si elles n'existent pas
+async function ensureGaragesTables() {
+  try {
+    // Créer la table garages
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS garages (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        nom_garage VARCHAR(200) NOT NULL,
+        adresse TEXT,
+        ville VARCHAR(100),
+        code_postal VARCHAR(10),
+        telephone VARCHAR(20),
+        email VARCHAR(255) UNIQUE,
+        siret VARCHAR(14),
+        specialites TEXT COMMENT 'Services proposés par le garage',
+        statut ENUM('actif', 'inactif', 'en_attente') DEFAULT 'en_attente',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Créer la table demandes_prestations
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS demandes_prestations (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        client_id INT NOT NULL,
+        vehicule_id INT NOT NULL,
+        service_id INT NOT NULL,
+        garage_id INT,
+        date_demande DATETIME NOT NULL,
+        date_souhaitee DATETIME,
+        description_probleme TEXT,
+        statut ENUM('en_attente', 'acceptee', 'en_cours', 'terminee', 'annulee') DEFAULT 'en_attente',
+        prix_estime DECIMAL(10,2),
+        duree_estimee INT COMMENT 'Durée estimée en minutes',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+        FOREIGN KEY (vehicule_id) REFERENCES vehicules(id) ON DELETE CASCADE,
+        FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE,
+        FOREIGN KEY (garage_id) REFERENCES garages(id) ON DELETE SET NULL
+      )
+    `);
+
+    console.log('✅ Tables garages et demandes_prestations vérifiées/créées');
+  } catch (error) {
+    console.error('❌ Erreur création tables garages:', error);
   }
 }
 
@@ -923,9 +976,9 @@ app.post('/api/auth/register', async (req, res) => {
     }
     
     // Valider le rôle
-    const validRoles = ['admin', 'mecanicien', 'client'];
+    const validRoles = ['admin', 'mecanicien', 'client', 'garage'];
     if (!validRoles.includes(role)) {
-      return res.status(400).json({ error: 'Rôle invalide. Rôles autorisés: admin, mecanicien, client' });
+      return res.status(400).json({ error: 'Rôle invalide. Rôles autorisés: admin, mecanicien, client, garage' });
     }
     
     const normalizedEmail = String(email).trim().toLowerCase();
@@ -940,9 +993,11 @@ app.post('/api/auth/register', async (req, res) => {
     let type_compte = 'client';
     if (role === 'admin') type_compte = 'admin';
     else if (role === 'mecanicien') type_compte = 'mecanicien';
+    else if (role === 'garage') type_compte = 'garage';
     
     let clientId = null;
     let employeId = null;
+    let garageId = null;
     
     // Si c'est un client, créer un enregistrement dans la table clients
     if (role === 'client') {
@@ -986,9 +1041,19 @@ app.post('/api/auth/register', async (req, res) => {
       }
     }
     
+    // Si c'est un garage, créer un enregistrement dans la table garages
+    if (role === 'garage') {
+      const { nom_garage, adresse, ville, code_postal, telephone_garage, siret, specialites } = req.body;
+      const [garageResult] = await pool.execute(
+        'INSERT INTO garages (nom_garage, adresse, ville, code_postal, telephone, email, siret, specialites, statut) VALUES (?, ?, ?, ?, ?, ?, ?, ?, "en_attente")',
+        [nom_garage || nom || '', adresse || '', ville || '', code_postal || '', telephone_garage || '', normalizedEmail, siret || '', specialites || '']
+      );
+      garageId = garageResult.insertId;
+    }
+    
     const [result] = await pool.execute(
-      'INSERT INTO utilisateurs (email, mot_de_passe, role, type_compte, client_id, employe_id, nom, prenom, telephone, actif) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
-      [normalizedEmail, passwordHash, role, type_compte, clientId, employeId, nom || '', prenom || '', '']
+      'INSERT INTO utilisateurs (email, mot_de_passe, role, type_compte, client_id, employe_id, garage_id, nom, prenom, telephone, actif) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
+      [normalizedEmail, passwordHash, role, type_compte, clientId, employeId, garageId, nom || '', prenom || '', '']
     );
     
     const user = { 
@@ -1901,7 +1966,7 @@ app.get('/api/client/factures', authenticateToken, async (req, res) => {
 
 app.post('/api/factures', async (req, res) => {
   try {
-    const { client_id, reparation_id, total_ht, total_ttc, statut } = req.body;
+    const { client_id, reparation_id, total_ht, total_ttc, statut, mode_paiement, notes } = req.body;
     
     console.log('Données reçues pour création facture:', { client_id, reparation_id, total_ht, total_ttc, statut });
     
@@ -1909,17 +1974,21 @@ app.post('/api/factures', async (req, res) => {
     if (!client_id) {
       return res.status(400).json({ error: 'client_id est requis' });
     }
-    if (!reparation_id) {
-      return res.status(400).json({ error: 'reparation_id est requis' });
+    // reparation_id facultatif pour une facture liée à une demande prestation
+    const repIdValue = (typeof reparation_id === 'number' && !Number.isNaN(reparation_id)) ? reparation_id : null;
+    const totalHtNum = parseFloat(total_ht);
+    const totalTtcNum = parseFloat(total_ttc);
+    if (!Number.isFinite(totalHtNum) || !Number.isFinite(totalTtcNum)) {
+      return res.status(400).json({ error: 'total_ht et total_ttc doivent être numériques' });
     }
     
     const numero = `FAC-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
     
     const [result] = await pool.execute(
-      'INSERT INTO factures (numero, client_id, reparation_id, total_ht, total_ttc, statut, date_facture) VALUES (?, ?, ?, ?, ?, ?, NOW())',
-      [numero, client_id, reparation_id, total_ht, total_ttc, statut || 'brouillon']
+      'INSERT INTO factures (numero, client_id, reparation_id, total_ht, total_ttc, statut, date_facture, mode_paiement, notes) VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?)',
+      [numero, client_id, repIdValue, totalHtNum, totalTtcNum, statut || 'brouillon', mode_paiement || null, notes || null]
     );
-    res.status(201).json({ id: result.insertId, numero, message: 'Facture créée avec succès' });
+    res.status(201).json({ id: result.insertId, numero, total_ht: totalHtNum, total_ttc: totalTtcNum, mode_paiement: mode_paiement || null, notes: notes || null, message: 'Facture créée avec succès' });
   } catch (error) {
     console.error('Erreur lors de la création de la facture:', error);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -3403,9 +3472,169 @@ app.get('/api/mecanicien/rendez-vous', authenticateToken, async (req, res) => {
   }
 });
 
+// ========================================
+// ROUTES API GARAGES
+// ========================================
+
+// Lister tous les garages
+app.get('/api/garages', async (req, res) => {
+  try {
+    const onlyActive = (req.query?.statut || '').toString().toLowerCase() === 'actif';
+    const sql = onlyActive
+      ? `SELECT * FROM garages WHERE statut = 'actif' ORDER BY nom_garage`
+      : `SELECT * FROM garages ORDER BY nom_garage`;
+    const [rows] = await pool.execute(sql);
+    res.json(rows);
+  } catch (error) {
+    console.error('Erreur récupération garages:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Créer un nouveau garage
+app.post('/api/garages', async (req, res) => {
+  try {
+    const { nom_garage, adresse, ville, code_postal, telephone, email, siret, specialites } = req.body;
+    
+    const [result] = await pool.execute(`
+      INSERT INTO garages (nom_garage, adresse, ville, code_postal, telephone, email, siret, specialites, statut)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'en_attente')
+    `, [nom_garage, adresse, ville, code_postal, telephone, email, siret, specialites]);
+    
+    res.status(201).json({ id: result.insertId, message: 'Garage créé avec succès' });
+  } catch (error) {
+    console.error('Erreur création garage:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ========================================
+// ROUTES API DEMANDES PRESTATIONS
+// ========================================
+
+// Lister toutes les demandes de prestations
+app.get('/api/demandes-prestations', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(`
+      SELECT dp.*, 
+             c.nom as client_nom, c.prenom as client_prenom,
+             v.marque, v.modele, v.immatriculation,
+             s.nom as service_nom, s.prix as service_prix,
+             g.nom_garage
+      FROM demandes_prestations dp
+      LEFT JOIN clients c ON dp.client_id = c.id
+      LEFT JOIN vehicules v ON dp.vehicule_id = v.id
+      LEFT JOIN services s ON dp.service_id = s.id
+      LEFT JOIN garages g ON dp.garage_id = g.id
+      ORDER BY dp.date_demande DESC
+    `);
+    res.json(rows);
+  } catch (error) {
+    console.error('Erreur récupération demandes prestations:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Créer une nouvelle demande de prestation
+app.post('/api/demandes-prestations', async (req, res) => {
+  try {
+    const { client_id, vehicule_id, service_id, date_souhaitee, description_probleme } = req.body;
+    
+    const [result] = await pool.execute(`
+      INSERT INTO demandes_prestations (client_id, vehicule_id, service_id, date_demande, date_souhaitee, description_probleme)
+      VALUES (?, ?, ?, NOW(), ?, ?)
+    `, [client_id, vehicule_id, service_id, date_souhaitee, description_probleme]);
+    
+    res.status(201).json({ id: result.insertId, message: 'Demande de prestation créée avec succès' });
+  } catch (error) {
+    console.error('Erreur création demande prestation:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Accepter une demande de prestation (assigner à un garage)
+app.patch('/api/demandes-prestations/:id/accept', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { garage_id, prix_estime, duree_estimee } = req.body;
+    
+    await pool.execute(`
+      UPDATE demandes_prestations 
+      SET garage_id = ?, prix_estime = ?, duree_estimee = ?, statut = 'acceptee'
+      WHERE id = ?
+    `, [garage_id, prix_estime, duree_estimee, id]);
+    
+    res.json({ message: 'Demande acceptée et assignée au garage' });
+  } catch (error) {
+    console.error('Erreur acceptation demande:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Lister les demandes pour un garage spécifique
+app.get('/api/garages/:id/demandes', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await pool.execute(`
+      SELECT dp.*, 
+             c.nom as client_nom, c.prenom as client_prenom, c.telephone as client_telephone,
+             v.marque, v.modele, v.immatriculation,
+             s.nom as service_nom, s.prix as service_prix
+      FROM demandes_prestations dp
+      LEFT JOIN clients c ON dp.client_id = c.id
+      LEFT JOIN vehicules v ON dp.vehicule_id = v.id
+      LEFT JOIN services s ON dp.service_id = s.id
+      WHERE dp.garage_id = ?
+      ORDER BY dp.date_demande DESC
+    `, [id]);
+    res.json(rows);
+  } catch (error) {
+    console.error('Erreur récupération demandes garage:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Mettre à jour le statut d'une demande de prestation
+app.patch('/api/demandes-prestations/:id/statut', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { statut } = req.body;
+    
+    await pool.execute(`
+      UPDATE demandes_prestations 
+      SET statut = ?, updated_at = NOW()
+      WHERE id = ?
+    `, [statut, id]);
+    
+    res.json({ message: 'Statut mis à jour avec succès' });
+  } catch (error) {
+    console.error('Erreur mise à jour statut:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Supprimer une demande de prestation
+app.delete('/api/demandes-prestations/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Vérifier existence
+    const [rows] = await pool.execute('SELECT id FROM demandes_prestations WHERE id = ?', [id]);
+    if (rows.length === 0) {
+      // Rendre l'opération idempotente: considérer comme succès si déjà supprimée
+      return res.json({ message: 'Demande déjà supprimée ou introuvable' });
+    }
+    await pool.execute('DELETE FROM demandes_prestations WHERE id = ?', [id]);
+    res.json({ message: 'Demande supprimée avec succès' });
+  } catch (error) {
+    console.error('Erreur lors de la suppression de la demande:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 async function startServer() {
   await initializeDatabase();
   await ensureUsersTable();
+  await ensureGaragesTables();
   
   app.listen(PORT, () => {
     console.log(`🚀 Serveur démarré sur le port ${PORT}`);

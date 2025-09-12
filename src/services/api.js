@@ -90,7 +90,7 @@ export const vehiculesAPI = {
   getAll: () => api.get('/vehicules'),
   getById: (id) => api.get(`/vehicules/${id}`),
   getByClient: (clientId) => api.get(`/vehicules?client_id=${clientId}`),
-  getClientVehicules: () => api.get('/client/vehicules'),
+  getClientVehicules: () => api.get('/client/vehicules').then((r) => r.data),
   getMecanicienVehicules: () => api.get('/mecanicien/vehicules'),
   create: (vehiculeData) => api.post('/vehicules', vehiculeData),
   update: (id, vehiculeData) => api.put(`/vehicules/${id}`, vehiculeData),
@@ -117,7 +117,7 @@ export const facturesAPI = {
   getById: (id) => api.get(`/factures/${id}`),
   getByClient: (clientId) => api.get(`/factures/client/${clientId}`),
   getClientFactures: () => api.get('/client/factures'),
-  create: (factureData) => api.post('/factures', factureData),
+  create: (factureData) => api.post('/factures', factureData).then((r) => r.data),
   update: (id, factureData) => api.put(`/factures/${id}`, factureData),
   delete: (id) => api.delete(`/factures/${id}`),
 };
@@ -151,9 +151,17 @@ export const boutiqueAPI = {
   deleteArticle: (id) => api.delete(`/boutique/articles/${id}`),
 };
 
+// Boutique Client simple produits
+export const boutiqueClientAPI = {
+  listProduits: () => api.get('/boutique/produits').then(r => r.data),
+  createProduit: (produit) => api.post('/boutique/produits', produit).then(r => r.data),
+  deleteProduit: (id) => api.delete(`/boutique/produits/${id}`).then(r => r.data),
+  updateProduit: (id, produit) => api.put(`/boutique/produits/${id}`, produit).then(r => r.data),
+};
+
 // Services pour les services
 export const servicesAPI = {
-  getAll: () => api.get('/services'),
+  getAll: () => api.get('/services').then((r) => r.data),
   getById: (id) => api.get(`/services/${id}`),
   create: (serviceData) => api.post('/services', serviceData),
   update: (id, serviceData) => api.put(`/services/${id}`, serviceData),
@@ -175,10 +183,38 @@ export const rendezVousAPI = {
   toReparation: (id, payload) => api.post(`/rendez-vous/${id}/to-reparation`, payload),
 };
 
+// Services pour les garages
+export const garagesAPI = {
+  getAll: () => api.get('/garages').then((r) => r.data),
+  getById: (id) => api.get(`/garages/${id}`),
+  create: (garageData) => api.post('/garages', garageData),
+  update: (id, garageData) => api.put(`/garages/${id}`, garageData),
+  delete: (id) => api.delete(`/garages/${id}`),
+  getDemandes: (id) => api.get(`/garages/${id}/demandes`).then((r) => r.data),
+};
+
+// Services pour les demandes de prestations
+export const demandesPrestationsAPI = {
+  getAll: () => api.get('/demandes-prestations').then((r) => r.data),
+  getById: (id) => api.get(`/demandes-prestations/${id}`).then((r) => r.data),
+  getByClient: (clientId) => api.get(`/demandes-prestations?client_id=${clientId}`).then((r) => r.data),
+  getByGarage: (garageId) => api.get(`/garages/${garageId}/demandes`).then((r) => r.data),
+  create: (demandeData) => api.post('/demandes-prestations', demandeData).then((r) => r.data),
+  update: (id, demandeData) => api.put(`/demandes-prestations/${id}`, demandeData).then((r) => r.data),
+  delete: (id) => api.delete(`/demandes-prestations/${id}`).then((r) => r.data),
+  accept: (id, acceptData) => api.patch(`/demandes-prestations/${id}/accept`, acceptData).then((r) => r.data),
+  updateStatut: (id, statutData) => api.patch(`/demandes-prestations/${id}/statut`, statutData).then((r) => r.data),
+};
+
 // Services pour le tableau de bord
 export const dashboardAPI = {
   getStats: () => api.get('/dashboard/stats'),
   getRecentActivity: () => api.get('/dashboard/recent-activity'),
+};
+
+// Factures pour garage
+export const facturesGarageAPI = {
+  getByGarage: (garageId) => api.get(`/factures?garage_id=${garageId}`).then(r => r.data),
 };
 
 // AI Chat (RAG)

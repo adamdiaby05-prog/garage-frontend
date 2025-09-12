@@ -46,7 +46,7 @@ const RendezVousMecanoContent = () => {
       }
       
       const userData = JSON.parse(user);
-      if (userData.role !== 'mecanicien') {
+      if (userData.role !== 'mecanicien' && userData.role !== 'garage') {
         console.log('🚫 Accès refusé - rôle non autorisé:', userData.role);
         setError('auth_required');
         setLoading(false);
@@ -59,7 +59,10 @@ const RendezVousMecanoContent = () => {
       
       // Appel API direct avec headers explicites
       const API_BASE = process.env.REACT_APP_API_BASE_URL || '/api';
-      const response = await fetch(`${API_BASE}/mecanicien/rendez-vous`, {
+      const path = userData.role === 'garage' && userData.garage_id
+        ? `/garages/${userData.garage_id}/demandes`
+        : '/mecanicien/rendez-vous';
+      const response = await fetch(`${API_BASE}${path}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -281,7 +284,7 @@ const RendezVousMecanoContent = () => {
 
 const RendezVousMecanoPage = () => {
   return (
-    <AuthGuard requiredRole="mecanicien">
+    <AuthGuard requiredRole="garage">
       <RendezVousMecanoContent />
     </AuthGuard>
   );

@@ -46,13 +46,43 @@ const FactureComponent = ({ facture, onPrint }) => {
       .filter(Boolean);
   })();
 
-  // Tarification main d'oeuvre (HT)
+  // Lignes personnalisées encodées dans notes sous forme "1 x Nom @ Prix"
+  const parsedCustomLines = (() => {
+    const notes = String(facture.notes || '');
+    const marker = 'LIGNES:';
+    const pos = notes.indexOf(marker);
+    if (pos === -1) return [];
+    const block = notes.slice(pos + marker.length);
+    return block
+      .split('\n')
+      .map(l => l.trim())
+      .filter(Boolean)
+      .map(l => {
+        const m = l.match(/^(\d+)\s*x\s*(.+)\s*@\s*([0-9]+[\.,]?[0-9]*)$/i);
+        if (!m) return null;
+        const qty = parseInt(m[1], 10) || 0;
+        const name = m[2];
+        const unit = parseFloat(String(m[3]).replace(',', '.')) || 0;
+        return { qty, name, unit, total: qty * unit };
+      })
+      .filter(Boolean);
+  })();
+
+  // Totaux explicites envoyés par l'API (si disponibles)
+  const hasExplicitTotals = facture.total_ht != null && facture.total_ht !== '';
+  const explicitHT = hasExplicitTotals ? Number(facture.total_ht) : null;
+  const explicitTTC = hasExplicitTotals ? Number(facture.total_ttc ?? (Number(facture.total_ht) * 1.2)) : null;
+
+  // Tarification par défaut (fallback) si aucun total fourni
   const LABOR_UNIT_EUR = 30;
   const laborQty = parseFloat(facture.duree_heures || 1) || 1;
   const laborTotal = laborQty * LABOR_UNIT_EUR;
   const partsTotal = parsedPieces.reduce((sum, p) => sum + (p.total || 0), 0);
-  const subtotalHT = laborTotal + partsTotal;
-  const totalTTC = subtotalHT * 1.2;
+  const fallbackSubtotalHT = laborTotal + partsTotal;
+  const fallbackTotalTTC = fallbackSubtotalHT * 1.2;
+
+  const subtotalHT = hasExplicitTotals ? explicitHT : fallbackSubtotalHT;
+  const totalTTC = hasExplicitTotals ? explicitTTC : fallbackTotalTTC;
 
   return (
     <Paper 
@@ -169,35 +199,84 @@ const FactureComponent = ({ facture, onPrint }) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            <TableRow>
-              <TableCell sx={{ borderTop: '1px solid #111827', borderRight: '1px solid #111827' }}>
-                <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                  Main d'œuvre - Réparation véhicule
-                </Typography>
-                {facture.description_travaux && (
-                  <Typography variant="body2" sx={{ color: '#666', mt: 0.5 }}>
-                    {facture.description_travaux}
+            {hasExplicitTotals ? (
+              parsedCustomLines.length > 0 ? (
+                parsedCustomLines.map((p, idx) => (
+                  <TableRow key={`custom-${idx}`}>
+                    <TableCell sx={{ borderTop: '1px solid #111827', borderRight: '1px solid #111827' }}>
+                      <Typography variant="body1">{p.name}</Typography>
+                    </TableCell>
+                    <TableCell sx={{ textAlign: 'center', borderTop: '1px solid #111827', borderRight: '1px solid #111827' }}>
+                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>{p.qty}</Typography>
+                    </TableCell>
+                    <TableCell sx={{ textAlign: 'center', borderTop: '1px solid #111827', borderRight: '1px solid #111827' }}>
+                      <Typography variant="body1">{formatCurrency(p.unit)}</Typography>
+                    </TableCell>
+                    <TableCell sx={{ textAlign: 'right', borderTop: '1px solid #111827' }}>
+                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>{formatCurrency(p.total)}</Typography>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell sx={{ borderTop: '1px solid #111827', borderRight: '1px solid #111827' }}>
+                    <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                      Montant saisi
+                    </Typography>
+                    {facture.description_travaux && (
+                      <Typography variant="body2" sx={{ color: '#666', mt: 0.5 }}>
+                        {facture.description_travaux}
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell sx={{ textAlign: 'center', borderTop: '1px solid #111827', borderRight: '1px solid #111827' }}>
+                    <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                      1
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ textAlign: 'center', borderTop: '1px solid #111827', borderRight: '1px solid #111827' }}>
+                    <Typography variant="body1">
+                      {formatCurrency(subtotalHT)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ textAlign: 'right', borderTop: '1px solid #111827' }}>
+                    <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                      {formatCurrency(subtotalHT)}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )
+            ) : (
+              <TableRow>
+                <TableCell sx={{ borderTop: '1px solid #111827', borderRight: '1px solid #111827' }}>
+                  <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                    Main d'œuvre - Réparation véhicule
                   </Typography>
-                )}
-              </TableCell>
-              <TableCell sx={{ textAlign: 'center', borderTop: '1px solid #111827', borderRight: '1px solid #111827' }}>
-                <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                  {facture.duree_heures || 1}
-                </Typography>
-              </TableCell>
-              <TableCell sx={{ textAlign: 'center', borderTop: '1px solid #111827', borderRight: '1px solid #111827' }}>
-                <Typography variant="body1">
-                  {formatCurrency(LABOR_UNIT_EUR)}
-                </Typography>
-              </TableCell>
-              <TableCell sx={{ textAlign: 'right', borderTop: '1px solid #111827' }}>
-                <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                  {formatCurrency(laborTotal)}
-                </Typography>
-              </TableCell>
-            </TableRow>
+                  {facture.description_travaux && (
+                    <Typography variant="body2" sx={{ color: '#666', mt: 0.5 }}>
+                      {facture.description_travaux}
+                    </Typography>
+                  )}
+                </TableCell>
+                <TableCell sx={{ textAlign: 'center', borderTop: '1px solid #111827', borderRight: '1px solid #111827' }}>
+                  <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                    {facture.duree_heures || 1}
+                  </Typography>
+                </TableCell>
+                <TableCell sx={{ textAlign: 'center', borderTop: '1px solid #111827', borderRight: '1px solid #111827' }}>
+                  <Typography variant="body1">
+                    {formatCurrency(LABOR_UNIT_EUR)}
+                  </Typography>
+                </TableCell>
+                <TableCell sx={{ textAlign: 'right', borderTop: '1px solid #111827' }}>
+                  <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                    {formatCurrency(laborTotal)}
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
 
-            {parsedPieces.map((p, idx) => (
+            {!hasExplicitTotals && parsedPieces.map((p, idx) => (
               <TableRow key={`piece-${idx}`}>
                 <TableCell sx={{ borderTop: '1px solid #111827', borderRight: '1px solid #111827' }}>
                   <Typography variant="body1">{p.name}</Typography>

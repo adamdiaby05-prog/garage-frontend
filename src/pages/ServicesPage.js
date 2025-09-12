@@ -52,25 +52,31 @@ const ServicesPage = () => {
   const fetchServices = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Chargement des services...');
       const response = await servicesAPI.getAll();
-      setServices(response.data);
+      console.log('✅ Réponse API services:', response);
+      console.log('📊 Type de réponse:', typeof response, Array.isArray(response));
+      setServices(response);
       setError(null);
     } catch (err) {
-      console.error('Erreur lors du chargement des services:', err);
-      setError('Erreur lors du chargement des services');
+      console.error('❌ Erreur lors du chargement des services:', err);
+      setError('Erreur lors du chargement des services: ' + (err.message || err));
     } finally {
       setLoading(false);
     }
   };
 
   // Filtrer les services
-  const filteredServices = useMemo(() => services.filter(service => {
-    const matchesSearch = 
-      service.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      service.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategorie = categorieFilter === 'all' || service.categorie === categorieFilter;
-    return matchesSearch && matchesCategorie;
-  }), [services, searchTerm, categorieFilter]);
+  const filteredServices = useMemo(() => {
+    if (!Array.isArray(services)) return [];
+    return services.filter(service => {
+      const matchesSearch = 
+        service.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        service.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategorie = categorieFilter === 'all' || service.categorie === categorieFilter;
+      return matchesSearch && matchesCategorie;
+    });
+  }, [services, searchTerm, categorieFilter]);
 
   // Gérer l'ajout d'un nouveau service
   const handleAddService = () => {
@@ -100,7 +106,9 @@ const ServicesPage = () => {
   const handleDeleteService = async (id) => {
     try {
       await servicesAPI.delete(id);
-      setServices(services.filter(service => service.id !== id));
+      if (Array.isArray(services)) {
+        setServices(services.filter(service => service.id !== id));
+      }
       setSnackbar({ open: true, message: 'Service supprimé avec succès', severity: 'success' });
     } catch (err) {
       console.error('Erreur lors de la suppression:', err);
@@ -117,7 +125,7 @@ const ServicesPage = () => {
   const handleExport = () => {
     try {
       // Préparer les données pour l'export
-      const exportData = services.map(service => ({
+      const exportData = Array.isArray(services) ? services.map(service => ({
         'ID': service.id_service || service.id,
         'Nom': service.nom || 'N/A',
         'Description': service.description || 'N/A',
@@ -126,7 +134,7 @@ const ServicesPage = () => {
         'Catégorie': service.categorie || 'N/A',
         'Statut': service.statut || 'N/A',
         'Date de création': service.date_creation ? new Date(service.date_creation).toLocaleDateString('fr-FR') : 'N/A'
-      }));
+      })) : [];
 
       // Créer un nouveau classeur Excel
       const wb = XLSX.utils.book_new();
@@ -169,7 +177,7 @@ const ServicesPage = () => {
       // Afficher un message de succès
       setSnackbar({
         open: true,
-        message: `Export Excel réussi ! ${services.length} services exportés.`,
+        message: `Export Excel réussi ! ${Array.isArray(services) ? services.length : 0} services exportés.`,
         severity: 'success'
       });
     } catch (error) {
@@ -202,34 +210,37 @@ const ServicesPage = () => {
     }
   };
 
-  const statCards = [
-    {
-      title: 'Total Services',
-      value: services.length,
-      icon: <Build />,
-      color: '#1e40af',
-      gradient: 'linear-gradient(135deg, #1e40af, #3b82f6)',
-      trend: '+3%',
-      trendUp: true
-    },
-    {
-      title: 'Actifs',
-      value: services.filter(s => s.statut === 'actif').length,
-      icon: <Star />,
-      color: '#2563eb',
-      gradient: 'linear-gradient(135deg, #2563eb, #60a5fa)',
-      trend: '+1%',
-      trendUp: true
-    },
-    {
-      title: 'Catégories',
-      value: new Set(services.map(s => s.categorie)).size,
-      icon: <Build />,
-      color: '#3b82f6',
-      gradient: 'linear-gradient(135deg, #3b82f6, #93c5fd)',
-      trend: '+0%'
-    }
-  ];
+  const statCards = useMemo(() => {
+    const safeServices = Array.isArray(services) ? services : [];
+    return [
+      {
+        title: 'Total Services',
+        value: safeServices.length,
+        icon: <Build />,
+        color: '#1e40af',
+        gradient: 'linear-gradient(135deg, #1e40af, #3b82f6)',
+        trend: '+3%',
+        trendUp: true
+      },
+      {
+        title: 'Actifs',
+        value: safeServices.filter(s => s.statut === 'actif').length,
+        icon: <Star />,
+        color: '#2563eb',
+        gradient: 'linear-gradient(135deg, #2563eb, #60a5fa)',
+        trend: '+1%',
+        trendUp: true
+      },
+      {
+        title: 'Catégories',
+        value: new Set(safeServices.map(s => s.categorie)).size,
+        icon: <Build />,
+        color: '#3b82f6',
+        gradient: 'linear-gradient(135deg, #3b82f6, #93c5fd)',
+        trend: '+0%'
+      }
+    ];
+  }, [services]);
 
   return (
     <ModernPageTemplate
@@ -288,7 +299,7 @@ const ServicesPage = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredServices.map((service) => (
+            {Array.isArray(filteredServices) ? filteredServices.map((service) => (
               <TableRow key={service.id} hover>
                 <TableCell>
                   <Typography variant="subtitle2" fontWeight="bold" sx={{ color: '#000000' }}>
@@ -345,28 +356,28 @@ const ServicesPage = () => {
                   </Box>
                 </TableCell>
               </TableRow>
-            ))}
+            )) : []}
           </TableBody>
         </Table>
       </TableContainer>
 
       <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="body2" color="textSecondary">
-          {filteredServices.length} service(s) trouvé(s)
+          {Array.isArray(filteredServices) ? filteredServices.length : 0} service(s) trouvé(s)
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Chip 
-            label={`Actifs: ${services.filter(s => s.statut === 'actif').length}`}
+            label={`Actifs: ${Array.isArray(services) ? services.filter(s => s.statut === 'actif').length : 0}`}
             color="success"
             size="small"
           />
           <Chip 
-            label={`Inactifs: ${services.filter(s => s.statut === 'inactif').length}`}
+            label={`Inactifs: ${Array.isArray(services) ? services.filter(s => s.statut === 'inactif').length : 0}`}
             color="error"
             size="small"
           />
           <Chip 
-            label={`Total: ${services.length}`}
+            label={`Total: ${Array.isArray(services) ? services.length : 0}`}
             color="primary"
             size="small"
           />

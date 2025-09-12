@@ -33,12 +33,30 @@ import { useNavigate, Link } from 'react-router-dom';
 const typeCompteMeta = {
   admin: { label: 'Administrateur', icon: <Security />, color: '#1e40af', description: 'Accès complet au système' },
   mecanicien: { label: 'Mécanicien', icon: <Build />, color: '#2563eb', description: 'Gestion des réparations et véhicules' },
+  garage: { label: 'Garage', icon: <Build />, color: '#059669', description: 'Gestion des demandes de prestations' },
   client: { label: 'Client', icon: <Person />, color: '#3b82f6', description: 'Accès à la boutique et suivi des réparations' },
 };
 
 const SignupPage = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ nom: '', prenom: '', email: '', password: '', role: 'client' });
+  const [form, setForm] = useState({ 
+    nom: '', 
+    prenom: '', 
+    email: '', 
+    password: '', 
+    role: 'client',
+    // Champs spécifiques aux garages
+    nom_garage: '',
+    adresse: '',
+    ville: '',
+    code_postal: '',
+    telephone_garage: '',
+    siret: '',
+    specialites: '',
+    // Géolocalisation (UI uniquement)
+    latitude: '',
+    longitude: ''
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -46,6 +64,8 @@ const SignupPage = () => {
   const [hoverKey, setHoverKey] = useState(null);
   const [isFocused, setIsFocused] = useState({ nom: false, prenom: false, email: false, password: false });
   const containerRef = useRef(null);
+  const [locating, setLocating] = useState(false);
+  const [geolocError, setGeolocError] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -56,6 +76,76 @@ const SignupPage = () => {
     if (newRole) setForm((prev) => ({ ...prev, role: newRole }));
   };
 
+  const handleLocate = async () => {
+    try {
+      setGeolocError('');
+      setLocating(true);
+      if (!('geolocation' in navigator)) {
+        setGeolocError("La géolocalisation n'est pas supportée par ce navigateur.");
+        setLocating(false);
+        return;
+      }
+
+      await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+          const { latitude, longitude, accuracy } = pos.coords;
+          // Précision max (5 décimales ~ 1.1m, 6 ~ 0.11m)
+          const latStr = latitude.toFixed(6);
+          const lonStr = longitude.toFixed(6);
+          setForm((prev) => ({ ...prev, latitude: latStr, longitude: lonStr }));
+
+          // Reverse geocoding précis via Nominatim (sans clé)
+          try {
+            const params = new URLSearchParams({
+              format: 'jsonv2',
+              lat: String(latitude),
+              lon: String(longitude),
+              addressdetails: '1',
+              zoom: '18' // zoom élevé pour le numéro et la rue
+            });
+            const url = `https://nominatim.openstreetmap.org/reverse?${params.toString()}`;
+            const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            const data = await res.json();
+            const a = data?.address || {};
+
+            // Construire une adresse précise: numéro + rue + quartier si dispo
+            const houseNumber = a.house_number ? `${a.house_number} ` : '';
+            const road = a.road || a.pedestrian || a.footway || a.residential || '';
+            const neighbourhood = a.neighbourhood || a.suburb || a.hamlet || '';
+            const constructedAdresse = [
+              `${houseNumber}${road}`.trim(),
+              neighbourhood
+            ].filter(Boolean).join(', ');
+
+            const ville = a.city || a.town || a.village || a.municipality || a.city_district || a.county || '';
+            const codePostal = a.postcode || '';
+
+            setForm((prev) => ({
+              ...prev,
+              // Adresse: si vide on propose la valeur détectée
+              adresse: prev.adresse || constructedAdresse,
+              // Ville et code postal: toujours mis à jour depuis la géolocalisation
+              ville: ville,
+              code_postal: codePostal
+            }));
+          } catch (_) {
+            // silencieux: coordonnées restent disponibles
+          }
+
+          // Optionnel: journaliser la précision en console
+          try { console.log(`📍 Localisé (${latStr}, ${lonStr}) ±${Math.round(accuracy)}m`); } catch {}
+
+          resolve();
+        }, (err) => {
+          setGeolocError(err.message || 'Impossible de récupérer la position.');
+          reject(err);
+        }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+      });
+    } finally {
+      setLocating(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -63,8 +153,37 @@ const SignupPage = () => {
 
     try {
       await authAPI.register(form);
-      // Rediriger vers la page de connexion après inscription
-      navigate('/login', { state: { registered: true } });
+
+      // Auto-login après inscription et redirection selon type_compte/role
+      try {
+        const { data } = await authAPI.login({ email: form.email, password: form.password });
+        const rawUser = data.user || {};
+        const backendRole = ((rawUser.role || '') + '').toLowerCase();
+        const normalizedRole =
+          backendRole === 'garage'
+            ? 'garage'
+            : backendRole === 'mecanicien' && rawUser.garage_id
+              ? 'garage'
+              : backendRole || (rawUser.garage_id ? 'garage' : 'client');
+        let user = { ...rawUser, role: normalizedRole };
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(user));
+        try {
+          if (user.role === 'garage' && !user.garage_id) {
+            const me = await authAPI.me();
+            const meUser = me?.data?.user || me?.data || {};
+            if (meUser && (meUser.garage_id || meUser.garageId)) {
+              user = { ...user, garage_id: meUser.garage_id || meUser.garageId };
+              localStorage.setItem('user', JSON.stringify(user));
+            }
+          }
+        } catch {}
+        try { window.dispatchEvent(new CustomEvent('auth-changed')); } catch {}
+        navigate(`/dashboard/${user.role}`);
+      } catch (e2) {
+        // Si l'auto-login échoue, retour à la connexion classique
+        navigate('/login', { state: { registered: true } });
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Inscription échouée');
     } finally {
@@ -110,10 +229,10 @@ const SignupPage = () => {
           />
         )}
         
-        {form.role === 'mecanicien' && (
+        {form.role === 'garage' && (
           <img 
             src="/ad.jpg" 
-            alt="Promotion Mécanicien" 
+            alt="Promotion Garage" 
             style={{
               width: '100%',
               height: '100%',
@@ -231,10 +350,10 @@ const SignupPage = () => {
                   <span>Admin</span>
                 </Box>
               </ToggleButton>
-              <ToggleButton value="mecanicien">
+              <ToggleButton value="garage">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Build />
-                  <span>Mécanicien</span>
+                  <span>Garage</span>
                 </Box>
               </ToggleButton>
               <ToggleButton value="client">
@@ -424,6 +543,179 @@ const SignupPage = () => {
                   }}
                 />
               </Grid>
+
+              {/* Champs spécifiques aux garages */}
+              {form.role === 'garage' && (
+                <>
+                  <Grid item xs={12}>
+                    <Typography variant="h6" sx={{ color: '#059669', mb: 2 }}>
+                      Informations du garage
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Button
+                      variant="outlined"
+                      onClick={handleLocate}
+                      disabled={locating}
+                      sx={{ textTransform: 'none', borderRadius: 2 }}
+                    >
+                      {locating ? 'Localisation…' : '📍 Localiser ma position'}
+                    </Button>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    {geolocError ? (
+                      <Alert severity="warning">{geolocError}</Alert>
+                    ) : null}
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      label="Nom du garage *"
+                      name="nom_garage"
+                      value={form.nom_garage}
+                      onChange={handleChange}
+                      required
+                      fullWidth
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          '& fieldset': { borderColor: '#d1d5db' },
+                          '&:hover fieldset': { borderColor: '#9ca3af' },
+                          '&.Mui-focused fieldset': { borderColor: '#059669', borderWidth: 2 }
+                        }
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      label="Adresse"
+                      name="adresse"
+                      value={form.adresse}
+                      onChange={handleChange}
+                      fullWidth
+                      multiline
+                      rows={2}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          '& fieldset': { borderColor: '#d1d5db' },
+                          '&:hover fieldset': { borderColor: '#9ca3af' },
+                          '&.Mui-focused fieldset': { borderColor: '#059669', borderWidth: 2 }
+                        }
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Ville"
+                      name="ville"
+                      value={form.ville}
+                      onChange={handleChange}
+                      fullWidth
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          '& fieldset': { borderColor: '#d1d5db' },
+                          '&:hover fieldset': { borderColor: '#9ca3af' },
+                          '&.Mui-focused fieldset': { borderColor: '#059669', borderWidth: 2 }
+                        }
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Code postal"
+                      name="code_postal"
+                      value={form.code_postal}
+                      onChange={handleChange}
+                      fullWidth
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          '& fieldset': { borderColor: '#d1d5db' },
+                          '&:hover fieldset': { borderColor: '#9ca3af' },
+                          '&.Mui-focused fieldset': { borderColor: '#059669', borderWidth: 2 }
+                        }
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Latitude"
+                      name="latitude"
+                      value={form.latitude}
+                      onChange={handleChange}
+                      fullWidth
+                      InputProps={{ readOnly: true }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Longitude"
+                      name="longitude"
+                      value={form.longitude}
+                      onChange={handleChange}
+                      fullWidth
+                      InputProps={{ readOnly: true }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Téléphone du garage"
+                      name="telephone_garage"
+                      value={form.telephone_garage}
+                      onChange={handleChange}
+                      fullWidth
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          '& fieldset': { borderColor: '#d1d5db' },
+                          '&:hover fieldset': { borderColor: '#9ca3af' },
+                          '&.Mui-focused fieldset': { borderColor: '#059669', borderWidth: 2 }
+                        }
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="SIRET"
+                      name="siret"
+                      value={form.siret}
+                      onChange={handleChange}
+                      fullWidth
+                      placeholder="14 chiffres"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          '& fieldset': { borderColor: '#d1d5db' },
+                          '&:hover fieldset': { borderColor: '#9ca3af' },
+                          '&.Mui-focused fieldset': { borderColor: '#059669', borderWidth: 2 }
+                        }
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      label="Spécialités / Services proposés"
+                      name="specialites"
+                      value={form.specialites}
+                      onChange={handleChange}
+                      fullWidth
+                      multiline
+                      rows={3}
+                      placeholder="Ex: Vidange, Révision, Diagnostic, Réparation moteur, Contrôle technique..."
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          '& fieldset': { borderColor: '#d1d5db' },
+                          '&:hover fieldset': { borderColor: '#9ca3af' },
+                          '&.Mui-focused fieldset': { borderColor: '#059669', borderWidth: 2 }
+                        }
+                      }}
+                    />
+                  </Grid>
+                </>
+              )}
+
               <Grid item xs={12}>
                 <FormControlLabel
                   control={

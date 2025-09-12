@@ -71,11 +71,16 @@ const VehiculeForm = ({ open, onClose, onSuccess, vehicule = null, fixedClientId
     setError('');
 
     try {
+      // Normaliser l'immatriculation (trim + upper)
+      const normalizedImmatriculation = (formData.numero_immatriculation || '')
+        .trim()
+        .toUpperCase();
+
       const dataToSend = {
         marque: formData.marque,
         modele: formData.modele,
         annee: formData.annee ? parseInt(formData.annee) : null,
-        immatriculation: formData.numero_immatriculation,
+        immatriculation: normalizedImmatriculation,
         numero_chassis: formData.numero_chassis,
         couleur: formData.couleur,
         kilometrage: formData.kilometrage ? parseInt(formData.kilometrage) : null,
@@ -92,13 +97,20 @@ const VehiculeForm = ({ open, onClose, onSuccess, vehicule = null, fixedClientId
       onClose();
     } catch (err) {
       console.error('Erreur:', err);
-      // Améliorer la gestion des erreurs
-      if (err.response?.data?.error) {
+      // Gestion dédiée des conflits (immatriculation dupliquée, etc.)
+      if (err.response?.status === 409) {
+        const apiMsg = err.response?.data?.error || 'Conflit de données';
+        setError(
+          apiMsg.includes('immatriculation')
+            ? "Cette immatriculation existe déjà. Veuillez en saisir une autre."
+            : apiMsg
+        );
+      } else if (err.response?.data?.error) {
         setError(err.response.data.error);
       } else if (err.message) {
         setError(err.message);
       } else {
-        setError('Erreur lors de l\'enregistrement du véhicule');
+        setError("Erreur lors de l'enregistrement du véhicule");
       }
     } finally {
       setLoading(false);

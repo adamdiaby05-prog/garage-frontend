@@ -38,20 +38,29 @@ const VehiculesMecanoContent = () => {
       }
       
       const userData = JSON.parse(user);
-      if (userData.role !== 'mecanicien') {
+      if (userData.role !== 'mecanicien' && userData.role !== 'garage') {
         console.log('🚫 Accès refusé - rôle non autorisé:', userData.role);
         setError('auth_required');
         setLoading(false);
         return;
       }
       
+      // Si rôle garage: pas d'endpoint véhicules côté backend → on n'appelle pas l'API
+      if (userData.role === 'garage') {
+        console.log('ℹ️ Rôle garage détecté: pas d\'endpoint véhicules disponible côté backend, on affiche une liste vide.');
+        setVehicules([]);
+        setLoading(false);
+        return;
+      }
+
       console.log('✅ Utilisateur authentifié, appel API...');
       console.log('🔑 Token:', token.substring(0, 20) + '...');
       console.log('👤 User:', userData);
       
       // Appel API direct avec headers explicites
-      const API_BASE = process.env.REACT_APP_API_BASE_URL || '/api';
-      const response = await fetch(`${API_BASE}/mecanicien/vehicules`, {
+      const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+      const path = '/mecanicien/vehicules';
+      const response = await fetch(`${API_BASE}${path}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -60,6 +69,9 @@ const VehiculesMecanoContent = () => {
       });
       
       if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error('HTTP 403: Forbidden');
+        }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
@@ -266,7 +278,7 @@ const VehiculesMecanoContent = () => {
 
 const VehiculesMecanoPage = () => {
   return (
-    <AuthGuard requiredRole="mecanicien">
+    <AuthGuard requiredRole="garage">
       <VehiculesMecanoContent />
     </AuthGuard>
   );

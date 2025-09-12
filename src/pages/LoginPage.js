@@ -48,11 +48,36 @@ const LoginPage = () => {
 
     try {
       const { data } = await authAPI.login(form);
+      try { console.log('🔐 Login OK → payload:', data); } catch {}
+      // Normaliser le rôle à partir de la valeur backend et des attributs utilisateur
+      const rawUser = data.user || {};
+      const backendRole = ((rawUser.role || '') + '').toLowerCase();
+      const normalizedRole =
+        backendRole === 'garage'
+          ? 'garage'
+          : backendRole === 'mecanicien' && rawUser.garage_id
+            ? 'garage'
+            : backendRole || (rawUser.garage_id ? 'garage' : 'client');
+      let user = { ...rawUser, role: normalizedRole };
       localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('user', JSON.stringify(user));
+      try { console.log('💾 Stocké → token(length):', (data.token||'').length, 'user:', data.user); } catch {}
       // Notifier l'application qu'une authentification a eu lieu (pour recharger la sidebar)
       try {
         window.dispatchEvent(new CustomEvent('auth-changed'));
+      } catch {}
+
+      // Compléter les infos garage si manquantes
+      try {
+        if (user.role === 'garage' && !user.garage_id) {
+          const me = await authAPI.me();
+          const meUser = me?.data?.user || me?.data || {};
+          if (meUser && (meUser.garage_id || meUser.garageId)) {
+            user = { ...user, garage_id: meUser.garage_id || meUser.garageId };
+            localStorage.setItem('user', JSON.stringify(user));
+            try { window.dispatchEvent(new CustomEvent('auth-changed')); } catch {}
+          }
+        }
       } catch {}
 
       // Redirect: priority to previous requested route
@@ -62,20 +87,11 @@ const LoginPage = () => {
         return;
       }
       
-      const user = data.user;
-      const role = user.role;
-      
-      // Redirection basée sur le rôle
-      if (role === 'admin') {
-        navigate('/dashboard/admin');
-      } else if (role === 'mecanicien') {
-        navigate('/dashboard/mecanicien');
-      } else if (role === 'client') {
-        navigate('/dashboard/client');
-      } else {
-        // Fallback vers le dashboard client par défaut
-        navigate('/dashboard/client');
-      }
+      const role = user.role || 'client';
+      try { console.log('🎭 Rôle après login:', role, '→ redirection...'); } catch {}
+      // Redirection universelle
+      navigate(`/dashboard/${role}`);
+      try { console.log('➡️ Navigation effectuée'); } catch {}
     } catch (err) {
       const status = err.response?.status;
       if (status === 401) {
