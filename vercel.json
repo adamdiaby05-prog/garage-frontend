@@ -1,16 +1,17 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "build" }
-    }
-  ],
+  "buildCommand": "bash vercel-build.sh",
+  "outputDirectory": "build",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "framework": "create-react-app",
   "routes": [
     { "handle": "filesystem" },
     { "src": "/.*", "dest": "/" }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production",
+    "REACT_APP_API_BASE_URL": "https://your-backend-url.vercel.app/api"
+  }
 }
 
 
