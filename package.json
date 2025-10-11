@@ -24,19 +24,21 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.1",
     "react-scripts": "5.0.1",
+    "serve": "^14.2.5",
     "sqlite3": "^5.1.7",
     "web-vitals": "^2.1.4",
     "xlsx": "^0.18.5"
   },
   "scripts": {
-    "start": "set PORT=3002 && react-scripts start",
+    "start": "react-scripts start",
+    "start:windows": "set PORT=3002 && react-scripts start",
     "server": "node server.js",
     "server:sqlite": "node server-sqlite.js",
-    "dev": "concurrently \"npm run server\" \"npm run start\"",
-    "dev:sqlite": "concurrently \"npm run server:sqlite\" \"npm run start\"",
+    "dev": "concurrently \"npm run server\" \"npm run start:windows\"",
+    "dev:sqlite": "concurrently \"npm run server:sqlite\" \"npm run start:windows\"",
     "dev:server": "node server.js",
     "dev:frontend": "set PORT=3002 && react-scripts start",
-    "dev:sequential": "npm run server & timeout 3 && npm run start",
+    "dev:sequential": "npm run server & timeout 3 && npm run start:windows",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
@@ -63,5 +65,5 @@
     "concurrently": "^8.2.2"
   },
   "proxy": "http://localhost:5000",
-  "homepage": "http://localhost:3002"
+  "homepage": "."
 }
