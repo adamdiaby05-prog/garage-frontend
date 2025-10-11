@@ -13,6 +13,10 @@ RUN npm ci --only=production
 # Copier le code source
 COPY . .
 
+# Définir les variables d'environnement pour le build
+ENV CI=false
+ENV GENERATE_SOURCEMAP=false
+
 # Construire l'application
 RUN npm run build
 
