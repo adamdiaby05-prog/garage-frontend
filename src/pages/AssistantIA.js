@@ -4,7 +4,7 @@ import { Send, SmartToy, Storage, Bolt, Language, Psychology } from '@mui/icons-
 import { aiAPI } from '../services/api';
 
 const AssistantIA = () => {
-  const [messages, setMessages] = useState([{ role: 'assistant', content: "Bonjour 👋 Je suis l'assistant AutoGenius. Posez-moi une question sur vos clients, véhicules, réparations, factures, pièces, services ou rendez‑vous. Je chercherai dans la base de données et je répondrai en français." }]);
+  const [messages, setMessages] = useState([{ role: 'assistant', content: "Bonjour 👋 Je suis l'assistant AutoSoft. Posez-moi une question sur vos clients, véhicules, réparations, factures, pièces, services ou rendez‑vous. Je chercherai dans la base de données et je répondrai en français." }]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [searchMode, setSearchMode] = useState('local'); // 'local' ou 'web'
@@ -55,7 +55,7 @@ const AssistantIA = () => {
         <Paper elevation={8} sx={{ p: 3, borderRadius: 4, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', backdropFilter: 'blur(16px)' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
             <Avatar sx={{ bgcolor: '#1d4ed8' }}><SmartToy /></Avatar>
-            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Assistant IA AutoGenius</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Assistant IA AutoSoft</Typography>
             
             {/* Boutons de sélection du mode */}
             <Stack direction="row" spacing={1} sx={{ ml: 'auto' }}>

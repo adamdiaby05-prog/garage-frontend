@@ -1,4 +1,4 @@
-// Configuration de l'IA Garage AutoGenius
+// Configuration de l'IA Garage AutoSoft
 module.exports = {
   // Configuration des recherches web
   webSearch: {

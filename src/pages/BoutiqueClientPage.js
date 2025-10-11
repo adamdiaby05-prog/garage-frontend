@@ -439,7 +439,7 @@ const BoutiqueClientPage = () => {
                 </div>
               </div>
               <div className="logo-text">
-                <h1>AutoGenius</h1>
+                <h1>AutoSoft</h1>
                 <span>Boutique Premium</span>
               </div>
             </div>
@@ -501,7 +501,7 @@ const BoutiqueClientPage = () => {
               <div className="hero-text">
                 <div className="welcome-badge">
                   <Star className="star-icon" />
-                  <span>Boutique Premium AutoGenius</span>
+                  <span>Boutique Premium AutoSoft</span>
                 </div>
                 
                 <h1 className="hero-title">
@@ -700,9 +700,9 @@ const BoutiqueClientPage = () => {
             <div className="footer-logo">
               <ShoppingCart />
             </div>
-            <span>AutoGenius Boutique</span>
+            <span>AutoSoft Boutique</span>
           </div>
-          <p>© 2024 AutoGenius - L'avenir du garage management 🚗</p>
+          <p>© 2024 AutoSoft - L'avenir du garage management 🚗</p>
         </div>
       </footer>
 

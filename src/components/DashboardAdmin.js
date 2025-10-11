@@ -1,22 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Grid, 
-  Paper, 
-  Typography, 
-  Card, 
-  CardContent, 
-  IconButton,
-  LinearProgress,
+import React, { useEffect, useState } from 'react';
+import {
+  Box,
+  Grid,
+  Card,
+  CardContent,
+  Typography,
   Chip,
-  Avatar,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  Divider,
+  LinearProgress,
   Button,
-  Tooltip,
+  Fade,
+  Avatar,
   Badge
 } from '@mui/material';
 import {
@@ -26,24 +19,22 @@ import {
   Receipt,
   TrendingUp,
   TrendingDown,
-  Speed,
-  CheckCircle,
-  Warning,
-  Error,
   AutoAwesome,
-  Bolt,
-  Star,
   Timeline,
-  BarChart,
-  PieChart,
-  MoreVert,
-  Visibility,
-  Edit,
-  Delete
+  Engineering,
+  LocalOffer,
+  FlashOn,
+  WorkspacePremium,
+  AttachMoney,
+  Schedule,
+  CheckCircle,
+  Warning
 } from '@mui/icons-material';
 
+// Tableau de bord Admin amélioré (sans Drawer/AppBar pour éviter les doublons avec le layout existant)
 const DashboardAdmin = ({ stats }) => {
-  const [hoveredCard, setHoveredCard] = useState(null);
+  const [hoveredCardIndex, setHoveredCardIndex] = useState(null);
+  const [pulseMap, setPulseMap] = useState({});
   const [animatedStats, setAnimatedStats] = useState({
     clients: 0,
     vehicules: 0,
@@ -51,335 +42,255 @@ const DashboardAdmin = ({ stats }) => {
     factures: 0
   });
 
-  // Animation des statistiques
+  const resolvedStats = {
+    clients: Number(stats?.clients ?? 247),
+    vehicules: Number(stats?.vehicules ?? 189),
+    reparations: Number(stats?.reparations ?? 56),
+    factures: Number(stats?.factures ?? 142)
+  };
+
+  // Animation des statistiques (élasticité fluide)
   useEffect(() => {
-    const animateStats = () => {
-      const targetStats = {
-        clients: stats?.clients || 0,
-        vehicules: stats?.vehicules || 0,
-        reparations: stats?.reparations || 0,
-        factures: stats?.factures || 0
-      };
+    const duration = 2200;
+    const steps = 80;
+    const stepDuration = duration / steps;
+    let currentStep = 0;
+    const interval = setInterval(() => {
+      currentStep++;
+      const t = currentStep / steps;
+      const easeOutElastic = 1 - Math.pow(2, -10 * t) * Math.cos((t * 10 - 0.75) * ((2 * Math.PI) / 3));
+      setAnimatedStats({
+        clients: Math.floor(resolvedStats.clients * Math.min(easeOutElastic, 1)),
+        vehicules: Math.floor(resolvedStats.vehicules * Math.min(easeOutElastic, 1)),
+        reparations: Math.floor(resolvedStats.reparations * Math.min(easeOutElastic, 1)),
+        factures: Math.floor(resolvedStats.factures * Math.min(easeOutElastic, 1))
+      });
+      if (currentStep >= steps) clearInterval(interval);
+    }, stepDuration);
+    return () => clearInterval(interval);
+  }, [resolvedStats.clients, resolvedStats.vehicules, resolvedStats.reparations, resolvedStats.factures]);
 
-      const duration = 2000;
-      const steps = 60;
-      const stepDuration = duration / steps;
-
-      let currentStep = 0;
-      const interval = setInterval(() => {
-        currentStep++;
-        const progress = currentStep / steps;
-        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-
-        setAnimatedStats({
-          clients: Math.floor(targetStats.clients * easeOutQuart),
-          vehicules: Math.floor(targetStats.vehicules * easeOutQuart),
-          reparations: Math.floor(targetStats.reparations * easeOutQuart),
-          factures: Math.floor(targetStats.factures * easeOutQuart)
-        });
-
-        if (currentStep >= steps) {
-          clearInterval(interval);
-        }
-      }, stepDuration);
-
-      return () => clearInterval(interval);
+  // Badges qui pulsent périodiquement
+  useEffect(() => {
+    const keys = ['notifications', 'updates', 'alerts', 'achievements'];
+    const pulseOnce = () => {
+      keys.forEach((k, idx) => {
+        setTimeout(() => {
+          setPulseMap(prev => ({ ...prev, [k]: true }));
+          setTimeout(() => setPulseMap(prev => ({ ...prev, [k]: false })), 900);
+        }, idx * 450);
+      });
     };
-
-    animateStats();
-  }, [stats]);
+    const interval = setInterval(pulseOnce, 4500);
+    pulseOnce();
+    return () => clearInterval(interval);
+  }, []);
 
   const statCards = [
     {
-      title: 'Clients',
+      title: 'Clients Actifs',
       value: animatedStats.clients,
       icon: <People />,
-      color: '#1e40af',
-      gradient: 'linear-gradient(135deg, #1e40af, #3b82f6)',
-      trend: '+12%',
+      gradient: 'linear-gradient(135deg, #065f46, #059669, #10b981, #34d399)',
+      trend: '+12.5%',
       trendUp: true,
-      description: 'Clients actifs'
+      description: 'Clients enregistrés',
+      progress: 85,
+      badge: 'Premium'
     },
     {
       title: 'Véhicules',
       value: animatedStats.vehicules,
       icon: <DirectionsCar />,
-      color: '#2563eb',
-      gradient: 'linear-gradient(135deg, #2563eb, #60a5fa)',
-      trend: '+8%',
+      gradient: 'linear-gradient(135deg, #064e3b, #047857, #059669, #10b981)',
+      trend: '+8.3%',
       trendUp: true,
-      description: 'Véhicules enregistrés'
+      description: 'Flotte gérée',
+      progress: 72,
+      badge: 'Fleet'
     },
     {
       title: 'Réparations',
       value: animatedStats.reparations,
       icon: <Build />,
-      color: '#3b82f6',
-      gradient: 'linear-gradient(135deg, #3b82f6, #93c5fd)',
-      trend: '+15%',
+      gradient: 'linear-gradient(135deg, #14532d, #166534, #15803d, #16a34a)',
+      trend: '+15.7%',
       trendUp: true,
-      description: 'Réparations en cours'
+      description: 'En cours',
+      progress: 45,
+      badge: 'Active'
     },
     {
-      title: 'Factures',
+      title: 'Revenus',
       value: animatedStats.factures,
-      icon: <Receipt />,
-      color: '#60a5fa',
-      gradient: 'linear-gradient(135deg, #60a5fa, #dbeafe)',
-      trend: '+22%',
+      icon: <AttachMoney />,
+      gradient: 'linear-gradient(135deg, #365314, #4d7c0f, #65a30d, #84cc16)',
+      trend: '+22.1%',
       trendUp: true,
-      description: 'Factures générées'
+      description: 'K€ ce mois',
+      progress: 92,
+      badge: 'Pro'
     }
   ];
 
-  const recentActivities = [
-    { id: 1, action: 'Nouveau client inscrit', time: 'Il y a 5 min', type: 'client', icon: <People /> },
-    { id: 2, action: 'Réparation terminée', time: 'Il y a 15 min', type: 'success', icon: <CheckCircle /> },
-    { id: 3, action: 'Facture générée', time: 'Il y a 30 min', type: 'info', icon: <Receipt /> },
-    { id: 4, action: 'Véhicule ajouté', time: 'Il y a 1h', type: 'vehicle', icon: <DirectionsCar /> },
-    { id: 5, action: 'Rendez-vous confirmé', time: 'Il y a 2h', type: 'warning', icon: <Warning /> }
+  const quickActions = [
+    { title: 'Client VIP', icon: <WorkspacePremium />, gradient: 'linear-gradient(135deg, #f59e0b, #f97316)' },
+    { title: 'Diagnostic', icon: <Engineering />, gradient: 'linear-gradient(135deg, #059669, #10b981)' },
+    { title: 'Facturation', icon: <LocalOffer />, gradient: 'linear-gradient(135deg, #7c3aed, #8b5cf6)' },
+    { title: 'Planning', icon: <Timeline />, gradient: 'linear-gradient(135deg, #dc2626, #ef4444)' }
   ];
 
-  const quickActions = [
-    { title: 'Ajouter Client', icon: <People />, color: '#1e40af' },
-    { title: 'Nouvelle Réparation', icon: <Build />, color: '#2563eb' },
-    { title: 'Générer Facture', icon: <Receipt />, color: '#3b82f6' },
-    { title: 'Planifier RDV', icon: <Timeline />, color: '#60a5fa' }
+  const recentActivities = [
+    { id: 1, action: 'Nouveau client VIP inscrit', time: 'Il y a 2 min', icon: <WorkspacePremium />, color: '#f59e0b' },
+    { id: 2, action: 'Réparation BMW terminée', time: 'Il y a 8 min', icon: <CheckCircle />, color: '#22c55e' },
+    { id: 3, action: 'Facture premium générée', time: 'Il y a 15 min', icon: <AttachMoney />, color: '#84cc16' },
+    { id: 4, action: 'Audi A4 ajoutée', time: 'Il y a 25 min', icon: <DirectionsCar />, color: '#10b981' },
+    { id: 5, action: 'RDV Mercedes confirmé', time: 'Il y a 45 min', icon: <Schedule />, color: '#34d399' },
+    { id: 6, action: 'Alerte maintenance critique', time: 'Il y a 1h', icon: <Warning />, color: '#ef4444' }
   ];
 
   return (
-    <Box sx={{ 
-      p: 4, 
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 25%, #2563eb 50%, #3b82f6 75%, #60a5fa 100%)',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
+    <Box sx={{ position: 'relative', minHeight: '100vh', background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 25%, #0f172a 50%, #1e293b 75%, #0a0a0a 100%)', overflow: 'hidden' }}>
       {/* Particules de fond */}
-      {[...Array(20)].map((_, i) => (
+      {[...Array(24)].map((_, i) => (
         <Box
           key={i}
           sx={{
             position: 'absolute',
             left: `${Math.random() * 100}%`,
             top: `${Math.random() * 100}%`,
-            width: Math.random() * 4 + 2,
-            height: Math.random() * 4 + 2,
-            backgroundColor: ['#1e40af', '#3b82f6', '#60a5fa', '#93c5fd'][Math.floor(Math.random() * 4)],
+            width: Math.random() * 6 + 2,
+            height: Math.random() * 6 + 2,
+            background: `radial-gradient(circle, ${['#10b981', '#34d399', '#6ee7b7'][Math.floor(Math.random() * 3)]} 0%, transparent 70%)`,
             borderRadius: '50%',
-            opacity: Math.random() * 0.6 + 0.2,
-            animation: `float ${Math.random() * 3 + 2}s ease-in-out infinite alternate, glow 2s ease-in-out infinite alternate`,
-            zIndex: 1
+            opacity: Math.random() * 0.7 + 0.1,
+            animation: `float ${Math.random() * 4 + 3}s ease-in-out infinite alternate, glow ${Math.random() * 2 + 1}s ease-in-out infinite alternate`,
+            zIndex: 1,
+            pointerEvents: 'none'
           }}
         />
       ))}
 
-      {/* Overlay avec effet glassmorphism */}
-      <Box sx={{ 
-        position: 'absolute', 
-        inset: 0, 
-        background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 50%, transparent 100%)',
-        backdropFilter: 'blur(8px)',
-        zIndex: 2
-      }} />
-
-      <Box sx={{ position: 'relative', zIndex: 10 }}>
-        {/* Header avec animation */}
-        <Box sx={{ textAlign: 'center', mb: 6 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 3, mb: 3 }}>
-            <Box sx={{ 
-              width: 80, 
-              height: 80, 
-              background: 'linear-gradient(135deg, #1e40af, #2563eb, #3b82f6)', 
-              borderRadius: 4, 
-              transform: 'rotate(12deg) perspective(1000px) rotateY(15deg)', 
-              boxShadow: '0 20px 40px rgba(59,130,246,0.4), 0 0 0 1px rgba(255,255,255,0.1)', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              animation: 'spin 8s linear infinite, float 3s ease-in-out infinite alternate',
-              position: 'relative',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                inset: -2,
-                background: 'linear-gradient(45deg, #1e40af, #3b82f6, #60a5fa, #93c5fd)',
-                borderRadius: 6,
-                zIndex: -1,
-                animation: 'spin 4s linear infinite reverse'
-              }
-            }}>
-              <Box sx={{ 
-                position: 'absolute', 
-                inset: 8, 
-                backgroundColor: 'rgba(255,255,255,0.95)', 
-                borderRadius: 2, 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                backdropFilter: 'blur(10px)'
-              }}>
-                <AutoAwesome sx={{ color: '#1976d2', fontSize: 32 }} />
-              </Box>
-            </Box>
-            <Box>
-              <Typography variant="h2" sx={{ 
-                fontWeight: 900, 
-                background: 'linear-gradient(135deg, #fff, #93c5fd, #dbeafe)', 
-                WebkitBackgroundClip: 'text', 
-                color: 'transparent',
-                animation: 'pulse 3s infinite, glow 2s ease-in-out infinite alternate',
-                textShadow: '0 0 30px rgba(147, 197, 253, 0.5)',
-                letterSpacing: '0.1em'
-              }}>
-                Dashboard Admin
-              </Typography>
-              <Typography variant="h6" sx={{ 
-                color: 'rgba(255,255,255,0.9)',
-                fontWeight: 300,
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase'
-              }}>
-                Vue d'ensemble du garage
-              </Typography>
-            </Box>
-          </Box>
+      <Box sx={{ p: { xs: 2, md: 4 }, position: 'relative', zIndex: 2 }}>
+        {/* En-tête simple */}
+        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <AutoAwesome sx={{ color: '#10b981' }} />
+          <Typography variant="h5" sx={{ color: '#e5e7eb', fontWeight: 800 }}>Dashboard Admin</Typography>
+          <Chip label="Actif" size="small" sx={{ ml: 1, color: '#10b981', borderColor: '#10b981' }} variant="outlined" />
         </Box>
 
         {/* Cartes de statistiques */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
           {statCards.map((card, index) => (
-            <Grid item xs={12} sm={6} md={3} key={card.title}>
+            <Grid item xs={12} sm={6} lg={3} key={card.title}>
               <Card
-                onMouseEnter={() => setHoveredCard(index)}
-                onMouseLeave={() => setHoveredCard(null)}
+                onMouseEnter={() => setHoveredCardIndex(index)}
+                onMouseLeave={() => setHoveredCardIndex(null)}
                 sx={{
-                  background: 'rgba(255,255,255,0.1)',
-                  backdropFilter: 'blur(20px)',
+                  background: 'rgba(0, 0, 0, 0.55)',
+                  backdropFilter: 'blur(16px)',
                   borderRadius: 4,
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  boxShadow: hoveredCard === index 
-                    ? '0 25px 50px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.3)' 
-                    : '0 15px 35px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.1)',
-                  transform: hoveredCard === index ? 'translateY(-8px) scale(1.02)' : 'translateY(0) scale(1)',
-                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  border: hoveredCardIndex === index ? '2px solid rgba(16, 185, 129, 0.6)' : '1px solid rgba(16, 185, 129, 0.2)',
+                  boxShadow: hoveredCardIndex === index ? '0 25px 50px rgba(16, 185, 129, 0.25), 0 0 30px rgba(16, 185, 129, 0.15)' : '0 10px 30px rgba(0, 0, 0, 0.3)',
+                  transform: hoveredCardIndex === index ? 'translateY(-8px) scale(1.015)' : 'translateY(0) scale(1)',
+                  transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                   overflow: 'hidden',
                   position: 'relative',
-                  cursor: 'pointer'
+                  cursor: 'default'
                 }}
               >
-                {/* Bordure animée */}
                 <Box sx={{
                   position: 'absolute',
-                  inset: 0,
-                  borderRadius: 4,
-                  padding: '2px',
-                  background: card.gradient,
-                  backgroundSize: '200% 200%',
-                  animation: hoveredCard === index ? 'gradientShift 2s ease infinite' : 'none',
-                  zIndex: -1
+                  top: 0,
+                  left: '-100%',
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.3), transparent)',
+                  transform: hoveredCardIndex === index ? 'translateX(200%)' : 'translateX(-100%)',
+                  transition: 'transform 0.8s ease-in-out',
+                  zIndex: 1
                 }} />
 
                 <CardContent sx={{ p: 3, position: 'relative', zIndex: 2 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                    <Box sx={{ 
-                      width: 60, 
-                      height: 60, 
-                      borderRadius: 3, 
+                    <Box sx={{
+                      width: 70,
+                      height: 70,
+                      borderRadius: 4,
                       background: card.gradient,
-                      display: 'flex', 
-                      alignItems: 'center', 
+                      display: 'flex',
+                      alignItems: 'center',
                       justifyContent: 'center',
-                      boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
-                      animation: hoveredCard === index ? 'pulse 1s ease-in-out infinite' : 'none'
+                      position: 'relative',
+                      boxShadow: '0 15px 35px rgba(16, 185, 129, 0.25)',
+                      animation: hoveredCardIndex === index ? 'pulse 1.1s ease-in-out infinite' : 'none',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        inset: -2,
+                        background: card.gradient,
+                        borderRadius: 5,
+                        zIndex: -1,
+                        filter: 'blur(5px)',
+                        opacity: hoveredCardIndex === index ? 0.78 : 0.28,
+                        transition: 'opacity 0.25s ease'
+                      }
                     }}>
-                      <Box sx={{ color: 'white', fontSize: 28 }}>
-                        {card.icon}
-                      </Box>
+                      <Box sx={{ color: 'white', fontSize: 32, zIndex: 2 }}>{card.icon}</Box>
                     </Box>
-                    <Chip
-                      icon={card.trendUp ? <TrendingUp /> : <TrendingDown />}
-                      label={card.trend}
-                      size="small"
-                      sx={{
-                        background: card.trendUp ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                        color: card.trendUp ? '#22c55e' : '#ef4444',
-                        border: `1px solid ${card.trendUp ? '#22c55e' : '#ef4444'}`,
-                        fontWeight: 'bold'
-                      }}
-                    />
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-end' }}>
+                      <Chip label={card.badge} size="small" sx={{ background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid #10b981', fontWeight: 'bold' }} />
+                      <Chip icon={card.trendUp ? <TrendingUp /> : <TrendingDown />} label={card.trend} size="small" sx={{ background: card.trendUp ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)', color: card.trendUp ? '#22c55e' : '#ef4444', border: `1px solid ${card.trendUp ? '#22c55e' : '#ef4444'}`, fontWeight: 'bold' }} />
+                    </Box>
                   </Box>
 
-                  <Typography variant="h3" sx={{ 
-                    fontWeight: 'bold', 
-                    color: 'white',
-                    mb: 1,
-                    textShadow: '0 0 20px rgba(255,255,255,0.3)'
-                  }}>
-                    {card.value.toLocaleString()}
+                  <Typography variant="h3" sx={{ fontWeight: 'bold', background: 'linear-gradient(135deg, #10b981, #34d399)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', mb: 1, textShadow: '0 0 20px rgba(16, 185, 129, 0.25)' }}>
+                    {Number(card.value).toLocaleString()}
                   </Typography>
+                  <Typography variant="h6" sx={{ color: '#10b981', fontWeight: 700, mb: 1 }}>{card.title}</Typography>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.75)', mb: 2 }}>{card.description}</Typography>
 
-                  <Typography variant="h6" sx={{ 
-                    color: 'rgba(255,255,255,0.9)',
-                    fontWeight: 600,
-                    mb: 1
-                  }}>
-                    {card.title}
-                  </Typography>
-
-                  <Typography variant="body2" sx={{ 
-                    color: 'rgba(255,255,255,0.7)',
-                    mb: 2
-                  }}>
-                    {card.description}
-                  </Typography>
-
-                  <LinearProgress
-                    variant="determinate"
-                    value={Math.min((card.value / 100) * 100, 100)}
-                    sx={{
-                      height: 6,
-                      borderRadius: 3,
-                      background: 'rgba(255,255,255,0.2)',
-                      '& .MuiLinearProgress-bar': {
-                        background: card.gradient,
-                        borderRadius: 3
-                      }
-                    }}
-                  />
+                  <Box sx={{ position: 'relative' }}>
+                    <LinearProgress
+                      variant="determinate"
+                      value={card.progress}
+                      sx={{
+                        height: 8,
+                        borderRadius: 4,
+                        background: 'rgba(255,255,255,0.08)',
+                        '& .MuiLinearProgress-bar': {
+                          background: card.gradient,
+                          borderRadius: 4,
+                          position: 'relative',
+                          '&::after': {
+                            content: '""',
+                            position: 'absolute',
+                            inset: 0,
+                            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)',
+                            animation: hoveredCardIndex === index ? 'shimmer 1.5s ease-in-out infinite' : 'none'
+                          }
+                        }
+                      }}
+                    />
+                    <Typography variant="caption" sx={{ position: 'absolute', right: 0, top: 10, color: '#34d399', fontWeight: 'bold' }}>{card.progress}%</Typography>
+                  </Box>
                 </CardContent>
               </Card>
             </Grid>
           ))}
         </Grid>
 
-        {/* Section des actions rapides et activités récentes */}
+        {/* Actions rapides + Activités récentes */}
         <Grid container spacing={3}>
-          {/* Actions rapides */}
           <Grid item xs={12} md={4}>
-            <Card sx={{
-              background: 'rgba(255,255,255,0.1)',
-              backdropFilter: 'blur(20px)',
-              borderRadius: 4,
-              border: '1px solid rgba(255,255,255,0.2)',
-              boxShadow: '0 15px 35px rgba(0,0,0,0.2)',
-              height: '100%'
-            }}>
+            <Card sx={{ background: 'rgba(0, 0, 0, 0.55)', backdropFilter: 'blur(16px)', borderRadius: 4, border: '1px solid rgba(16, 185, 129, 0.2)', height: '100%' }}>
               <CardContent sx={{ p: 3 }}>
-                <Typography variant="h5" sx={{ 
-                  color: 'white', 
-                  fontWeight: 'bold', 
-                  mb: 3,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1
-                }}>
-                  <Bolt sx={{ color: '#fbbf24' }} />
+                <Typography variant="h5" sx={{ color: '#10b981', fontWeight: 800, mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <FlashOn sx={{ color: '#f59e0b' }} />
                   Actions Rapides
                 </Typography>
-
-      <Grid container spacing={2}>
-                  {quickActions.map((action, index) => (
+                <Grid container spacing={2}>
+                  {quickActions.map((action) => (
                     <Grid item xs={6} key={action.title}>
                       <Button
                         variant="outlined"
@@ -387,18 +298,18 @@ const DashboardAdmin = ({ stats }) => {
                         fullWidth
                         sx={{
                           color: 'white',
-                          borderColor: action.color,
+                          borderColor: 'rgba(16, 185, 129, 0.3)',
                           borderRadius: 3,
-                          py: 1.5,
+                          py: 2,
                           fontWeight: 'bold',
-                          background: 'rgba(255,255,255,0.05)',
+                          background: 'rgba(16, 185, 129, 0.1)',
                           backdropFilter: 'blur(10px)',
-                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                           '&:hover': {
-                            background: `${action.color}20`,
-                            borderColor: action.color,
-                            transform: 'translateY(-2px)',
-                            boxShadow: `0 10px 25px ${action.color}40`
+                            background: action.gradient,
+                            borderColor: 'transparent',
+                            transform: 'translateY(-3px) scale(1.02)',
+                            boxShadow: '0 12px 30px rgba(0,0,0,0.35)'
                           }
                         }}
                       >
@@ -411,112 +322,63 @@ const DashboardAdmin = ({ stats }) => {
             </Card>
           </Grid>
 
-          {/* Activités récentes */}
           <Grid item xs={12} md={8}>
-            <Card sx={{
-              background: 'rgba(255,255,255,0.1)',
-              backdropFilter: 'blur(20px)',
-              borderRadius: 4,
-              border: '1px solid rgba(255,255,255,0.2)',
-              boxShadow: '0 15px 35px rgba(0,0,0,0.2)',
-              height: '100%'
-            }}>
+            <Card sx={{ background: 'rgba(0, 0, 0, 0.55)', backdropFilter: 'blur(16px)', borderRadius: 4, border: '1px solid rgba(16, 185, 129, 0.2)' }}>
               <CardContent sx={{ p: 3 }}>
-                <Typography variant="h5" sx={{ 
-                  color: 'white', 
-                  fontWeight: 'bold', 
-                  mb: 3,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1
-                }}>
-                  <Timeline sx={{ color: '#fbbf24' }} />
-                  Activités Récentes
-                </Typography>
-
-                <List sx={{ p: 0 }}>
-                  {recentActivities.map((activity, index) => (
-                    <React.Fragment key={activity.id}>
-                      <ListItem sx={{ 
-                        px: 0, 
-                        py: 1.5,
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          background: 'rgba(255,255,255,0.05)',
-                          borderRadius: 2,
-                          transform: 'translateX(8px)'
-                        }
-                      }}>
-                        <ListItemAvatar>
-                          <Avatar sx={{ 
-                            background: activity.type === 'success' ? '#22c55e' : 
-                                       activity.type === 'warning' ? '#f59e0b' : 
-                                       activity.type === 'error' ? '#ef4444' : '#3b82f6',
-                            animation: 'pulse 2s ease-in-out infinite'
-                          }}>
-                            {activity.icon}
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={
-                            <Typography sx={{ 
-                              color: 'white', 
-                              fontWeight: 500,
-                              fontSize: '1rem'
-                            }}>
-                              {activity.action}
-                            </Typography>
-                          }
-                          secondary={
-                            <Typography sx={{ 
-                              color: 'rgba(255,255,255,0.7)',
-                              fontSize: '0.875rem'
-                            }}>
-                              {activity.time}
-                            </Typography>
-                          }
-                        />
-                        <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                          <MoreVert />
-                        </IconButton>
-                      </ListItem>
-                      {index < recentActivities.length - 1 && (
-                        <Divider sx={{ 
-                          borderColor: 'rgba(255,255,255,0.1)',
-                          my: 1
-                        }} />
-                      )}
-                    </React.Fragment>
+                <Typography variant="h5" sx={{ color: '#10b981', fontWeight: 800, mb: 3 }}>Activités récentes</Typography>
+                <Grid container spacing={2}>
+                  {recentActivities.map((item) => (
+                    <Grid item xs={12} sm={6} key={item.id}>
+                      <Fade in timeout={500}>
+                        <Box sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 2,
+                          p: 2,
+                          borderRadius: 3,
+                          background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          transition: 'all 0.25s ease',
+                          '&:hover': { transform: 'translateY(-3px)', borderColor: 'rgba(16, 185, 129, 0.25)' }
+                        }}>
+                          <Avatar sx={{ bgcolor: item.color, color: '#0b0f0f' }}>{item.icon}</Avatar>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="body2" sx={{ color: '#e5e7eb', fontWeight: 600 }}>{item.action}</Typography>
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>{item.time}</Typography>
+                          </Box>
+                          <Badge
+                            variant="dot"
+                            color="success"
+                            sx={{ '& .MuiBadge-badge': { bgcolor: pulseMap.alerts ? '#22c55e' : 'rgba(34,197,94,0.6)' } }}
+                          />
+                        </Box>
+                      </Fade>
+                    </Grid>
                   ))}
-                </List>
+                </Grid>
               </CardContent>
             </Card>
           </Grid>
-      </Grid>
+        </Grid>
       </Box>
 
-      {/* Styles CSS pour les animations */}
+      {/* Animations */}
       <style>{`
         @keyframes float {
           0% { transform: translateY(0px); }
-          100% { transform: translateY(-20px); }
+          100% { transform: translateY(-10px); }
         }
         @keyframes glow {
-          0% { box-shadow: 0 0 5px currentColor; filter: brightness(1); }
-          100% { box-shadow: 0 0 20px currentColor; filter: brightness(1.3); }
-        }
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
+          0% { filter: brightness(1); }
+          100% { filter: brightness(1.15); }
         }
         @keyframes pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.8; transform: scale(1.05); }
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.04); }
         }
-        @keyframes gradientShift {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
         }
       `}</style>
     </Box>
@@ -524,12 +386,4 @@ const DashboardAdmin = ({ stats }) => {
 };
 
 export default DashboardAdmin;
-
-
-
-
-
-
-
-
 

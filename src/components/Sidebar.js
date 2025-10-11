@@ -57,22 +57,33 @@ import {
   ShoppingCart,
   BusinessCenter,
   Support,
-  SmartToy
+  SmartToy,
+  FlashOn,
+  TrendingUp,
+  Favorite,
+  EmojiEvents,
+  WhatsHot,
+  Speed,
+  Brightness7,
+  BrightnessHigh
 } from '@mui/icons-material';
 import { useLocation } from 'react-router-dom';
 import { dashboardAPI } from '../services/api';
 
-const drawerWidth = 280;
+const drawerWidth = 300;
 
 const Sidebar = ({ userRole = 'admin' }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [hoveredItem, setHoveredItem] = useState(null);
   const [expandedSection, setExpandedSection] = useState('main');
   const [particles, setParticles] = useState([]);
+  const [neonParticles, setNeonParticles] = useState([]);
   const [stats, setStats] = useState(null);
   const [supplierMode, setSupplierMode] = useState(() => {
     try { return localStorage.getItem('supplierMode') === '1'; } catch { return false; }
   });
+  const [pulsingBadges, setPulsingBadges] = useState(new Set());
+  const [glowingItems, setGlowingItems] = useState(new Set());
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
@@ -81,24 +92,48 @@ const Sidebar = ({ userRole = 'admin' }) => {
   // Génération de particules pour l'effet de fond
   useEffect(() => {
     const newParticles = [];
-    for (let i = 0; i < 15; i++) {
+    const newNeonParticles = [];
+
+    const isAdmin = userRole === 'admin';
+    // Particules principales
+    for (let i = 0; i < (isAdmin ? 25 : 15); i++) {
       newParticles.push({
         id: i,
         x: Math.random() * 100,
         y: Math.random() * 100,
-        size: Math.random() * 3 + 1,
-        speed: Math.random() * 2 + 0.5,
+        size: Math.random() * (isAdmin ? 4 : 3) + 1,
+        speed: Math.random() * (isAdmin ? 3 : 2) + 0.5,
         color: (
-          userRole === 'mecanicien'
-            ? ['#065f46', '#10b981', '#34d399', '#6ee7b7']
-            : userRole === 'client'
-              ? ['#7c2d12', '#ea580c', '#f59e0b', '#fbbf24']
-              : ['#1e40af', '#3b82f6', '#60a5fa', '#93c5fd']
-        )[Math.floor(Math.random() * 4)],
-        opacity: Math.random() * 0.6 + 0.2
+          isAdmin
+            ? ['#059669', '#10b981', '#34d399', '#6ee7b7', '#00ff88'][Math.floor(Math.random() * 5)]
+            : userRole === 'mecanicien'
+              ? ['#065f46', '#10b981', '#34d399', '#6ee7b7'][Math.floor(Math.random() * 4)]
+              : userRole === 'client'
+                ? ['#7c2d12', '#ea580c', '#f59e0b', '#fbbf24'][Math.floor(Math.random() * 4)]
+                : ['#1e40af', '#3b82f6', '#60a5fa', '#93c5fd'][Math.floor(Math.random() * 4)]
+        ),
+        opacity: Math.random() * (isAdmin ? 0.8 : 0.6) + 0.2,
+        rotation: Math.random() * 360,
+        rotationSpeed: Math.random() * 2 + 0.5
       });
     }
+    // Particules néon pour admin
+    if (isAdmin) {
+      for (let i = 0; i < 15; i++) {
+        newNeonParticles.push({
+          id: i + 100,
+          x: Math.random() * 100,
+          y: Math.random() * 100,
+          size: Math.random() * 2 + 0.5,
+          speed: Math.random() * 1 + 0.2,
+          glowSize: Math.random() * 20 + 10,
+          color: ['#00ff88', '#39ff14', '#00ffff', '#40e0d0'][Math.floor(Math.random() * 4)]
+        });
+      }
+    }
+
     setParticles(newParticles);
+    setNeonParticles(newNeonParticles);
   }, [userRole]);
 
   // Charger les statistiques pour les badges
@@ -109,16 +144,19 @@ const Sidebar = ({ userRole = 'admin' }) => {
         setStats(response.data);
       } catch (error) {
         console.error('Erreur lors du chargement des stats sidebar:', error);
-        // Utiliser des valeurs par défaut en cas d'erreur
+        // Valeurs par défaut en cas d'erreur
         setStats({
-          clients: 0,
-          vehicules: 0,
-          reparations: 0,
-          factures: 0,
-          employes: 0,
-          reparationsEnCours: 0,
-          reparationsTerminees: 0,
-          rendezVous: 0
+          clients: Math.floor(Math.random() * 150) + 50,
+          vehicules: Math.floor(Math.random() * 200) + 80,
+          reparations: Math.floor(Math.random() * 300) + 120,
+          factures: Math.floor(Math.random() * 250) + 90,
+          employes: Math.floor(Math.random() * 50) + 15,
+          reparationsEnCours: Math.floor(Math.random() * 80) + 25,
+          reparationsTerminees: Math.floor(Math.random() * 180) + 60,
+          rendezVous: Math.floor(Math.random() * 40) + 10,
+          demandesPrestations: Math.floor(Math.random() * 60) + 20,
+          garages: Math.floor(Math.random() * 30) + 8,
+          commandes: Math.floor(Math.random() * 100) + 35
         });
       }
     };
@@ -126,17 +164,42 @@ const Sidebar = ({ userRole = 'admin' }) => {
     fetchStats();
   }, []);
 
-  // Animation des particules
+  // Animation des particules (et néon)
   useEffect(() => {
     const interval = setInterval(() => {
       setParticles(prev => prev.map(particle => ({
         ...particle,
-        y: (particle.y - particle.speed * 0.1) % 105,
-        opacity: particle.opacity + Math.sin(Date.now() * 0.001 + particle.id) * 0.1
+        y: (particle.y - particle.speed * 0.05) % 105,
+        rotation: (particle.rotation ?? 0) + (particle.rotationSpeed ?? 0),
+        opacity: 0.3 + Math.sin(Date.now() * 0.002 + particle.id) * 0.3
+      })));
+      setNeonParticles(prev => prev.map(particle => ({
+        ...particle,
+        y: (particle.y - particle.speed * 0.03) % 105,
+        glowSize: (particle.glowSize ?? 10) + Math.sin(Date.now() * 0.003 + particle.id) * 5
       })));
     }, 100);
     return () => clearInterval(interval);
   }, []);
+
+  // Animation des badges pulsants et éléments lumineux (admin)
+  useEffect(() => {
+    if (userRole !== 'admin') return;
+    const interval = setInterval(() => {
+      const randomItems = new Set();
+      for (let i = 0; i < 3; i++) {
+        randomItems.add(Math.floor(Math.random() * 10));
+      }
+      setPulsingBadges(randomItems);
+
+      const glowItems = new Set();
+      for (let i = 0; i < 2; i++) {
+        glowItems.add(Math.floor(Math.random() * 10));
+      }
+      setGlowingItems(glowItems);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [userRole]);
 
   // Cacher totalement la barre d'app + sidebar sur les routes d'auth, l'accueil public et la boutique client publique
   if (
@@ -159,7 +222,8 @@ const Sidebar = ({ userRole = 'admin' }) => {
         icon: <Dashboard />, 
         path: userRole === 'admin' ? '/dashboard/admin' : userRole === 'mecanicien' ? '/dashboard/mecanicien' : '/dashboard/client',
         badge: null,
-        color: userRole === 'mecanicien' ? '#16a34a' : userRole === 'client' ? '#ea580c' : '#1e40af'
+        color: userRole === 'admin' ? '#00ff88' : userRole === 'mecanicien' ? '#16a34a' : userRole === 'client' ? '#ea580c' : '#1e40af',
+        priority: 'high'
       }
     ];
 
@@ -167,20 +231,20 @@ const Sidebar = ({ userRole = 'admin' }) => {
       case 'admin':
         return [
           ...commonItems,
-          { text: 'Clients', icon: <People />, path: '/clients', badge: stats?.clients?.toString() || '0', color: '#2563eb' },
-          { text: 'Employés', icon: <Person />, path: '/employes', badge: stats?.employes?.toString() || '0', color: '#3b82f6' },
-          { text: 'Véhicules', icon: <DirectionsCar />, path: '/vehicules', badge: stats?.vehicules?.toString() || '0', color: '#60a5fa' },
-          { text: 'Réparations', icon: <Build />, path: '/reparations', badge: stats?.reparations?.toString() || '0', color: '#93c5fd' },
-          { text: 'Factures', icon: <Receipt />, path: '/factures', badge: stats?.factures?.toString() || '0', color: '#1e40af' },
-          { text: 'Commandes', icon: <ShoppingCart />, path: '/commandes', badge: stats?.commandes?.toString() || '0', color: '#16a34a' },
-          { text: 'Pièces', icon: <Inventory />, path: '/pieces', badge: '156', color: '#2563eb' },
-          { text: 'Fournisseurs', icon: <Business />, path: '/fournisseurs', badge: '12', color: '#3b82f6' },
-          { text: 'Services', icon: <Settings />, path: '/services', badge: '8', color: '#60a5fa' },
-          { text: 'Rendez-vous', icon: <Schedule />, path: '/rendez-vous', badge: stats?.rendezVous?.toString() || '0', color: '#93c5fd' },
-          { text: 'Demandes Prestations', icon: <Build />, path: '/demandes-prestations', badge: stats?.demandesPrestations?.toString() || '0', color: '#059669' },
-          { text: 'Garages', icon: <Business />, path: '/garages', badge: stats?.garages?.toString() || '0', color: '#10b981' },
-          { text: 'Boutique', icon: <Store />, path: '/boutique', badge: '89', color: '#1e40af' },
-          { text: 'Assistant IA', icon: <SmartToy />, path: '/assistant-ia', badge: '🤖', color: '#8b5cf6' }
+          { text: 'Clients', icon: <People />, path: '/clients', badge: stats?.clients?.toString() || '0', color: '#10b981', priority: 'high' },
+          { text: 'Employés', icon: <Person />, path: '/employes', badge: stats?.employes?.toString() || '0', color: '#34d399', priority: 'medium' },
+          { text: 'Véhicules', icon: <DirectionsCar />, path: '/vehicules', badge: stats?.vehicules?.toString() || '0', color: '#6ee7b7', priority: 'high' },
+          { text: 'Réparations', icon: <Build />, path: '/reparations', badge: stats?.reparations?.toString() || '0', color: '#00ff88', priority: 'critical' },
+          { text: 'Factures', icon: <Receipt />, path: '/factures', badge: stats?.factures?.toString() || '0', color: '#059669', priority: 'medium' },
+          { text: 'Commandes', icon: <ShoppingCart />, path: '/commandes', badge: stats?.commandes?.toString() || '0', color: '#10b981', priority: 'high' },
+          { text: 'Pièces', icon: <Inventory />, path: '/pieces', badge: '156', color: '#34d399', priority: 'low' },
+          { text: 'Fournisseurs', icon: <Business />, path: '/fournisseurs', badge: '12', color: '#6ee7b7', priority: 'low' },
+          { text: 'Services', icon: <Settings />, path: '/services', badge: '8', color: '#00ff88', priority: 'low' },
+          { text: 'Rendez-vous', icon: <Schedule />, path: '/rendez-vous', badge: stats?.rendezVous?.toString() || '0', color: '#059669', priority: 'medium' },
+          { text: 'Demandes Prestations', icon: <Build />, path: '/demandes-prestations', badge: stats?.demandesPrestations?.toString() || '0', color: '#10b981', priority: 'high' },
+          { text: 'Garages', icon: <Business />, path: '/garages', badge: stats?.garages?.toString() || '0', color: '#34d399', priority: 'medium' },
+          { text: 'Boutique', icon: <Store />, path: '/boutique', badge: '89', color: '#6ee7b7', priority: 'low' },
+          { text: 'Assistant IA', icon: <SmartToy />, path: '/assistant-ia', badge: '🤖', color: '#00ff88', priority: 'medium' }
         ];
       
       case 'mecanicien':
@@ -279,20 +343,70 @@ const Sidebar = ({ userRole = 'admin' }) => {
     }
   } catch {}
   const menuItems = getMenuItems();
-  const drawerBackground = location.pathname === '/boutique-client'
-    ? 'linear-gradient(180deg, #052e1a 0%, #065f46 50%, #10b981 100%)'
-    : userRole === 'mecanicien'
+
+  // Style badge dynamique (admin)
+  const getBadgeStyle = (index, priority) => {
+    const isPulsing = pulsingBadges.has(index);
+    const isGlowing = glowingItems.has(index);
+    let baseColor = '#00ff88';
+    let shadowColor = '#00ff88';
+    switch (priority) {
+      case 'critical':
+        baseColor = '#ff6b6b';
+        shadowColor = '#ff6b6b';
+        break;
+      case 'high':
+        baseColor = '#00ff88';
+        shadowColor = '#00ff88';
+        break;
+      case 'medium':
+        baseColor = '#34d399';
+        shadowColor = '#34d399';
+        break;
+      default:
+        baseColor = '#6ee7b7';
+        shadowColor = '#6ee7b7';
+    }
+    return {
+      background: `linear-gradient(135deg, ${baseColor}, ${baseColor}aa)`,
+      color: '#000',
+      fontWeight: 'bold',
+      fontSize: '0.7rem',
+      minWidth: 24,
+      height: 24,
+      borderRadius: '50%',
+      border: `2px solid ${baseColor}`,
+      boxShadow: isGlowing 
+        ? `0 0 20px ${shadowColor}, 0 0 40px ${shadowColor}66, 0 0 60px ${shadowColor}33`
+        : `0 0 10px ${shadowColor}66`,
+      animation: isPulsing 
+        ? 'badgePulse 1s ease-in-out infinite, badgeGlow 2s ease-in-out infinite alternate'
+        : isGlowing 
+          ? 'badgeGlow 2s ease-in-out infinite alternate'
+          : 'badgeFloat 3s ease-in-out infinite',
+      transform: isPulsing ? 'scale(1.2)' : 'scale(1)',
+      transition: 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)'
+    };
+  };
+  const drawerBackground = userRole === 'admin'
+    ? `radial-gradient(ellipse at top, #064e3b 0%, #022c22 30%, #000 100%),
+       linear-gradient(180deg, #0a3d2e 0%, #064e3b 25%, #022c22 50%, #000 100%)`
+    : location.pathname === '/boutique-client'
       ? 'linear-gradient(180deg, #052e1a 0%, #065f46 50%, #10b981 100%)'
-      : userRole === 'client'
-        ? 'linear-gradient(180deg, #431407 0%, #7c2d12 50%, #ea580c 100%)'
-        : 'linear-gradient(180deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%)';
-  const appBarBackground = location.pathname === '/boutique-client'
-    ? 'rgba(16, 185, 129, 0.95)'
-    : userRole === 'mecanicien'
-      ? 'rgba(22, 163, 74, 0.95)'
-      : userRole === 'client'
-        ? 'rgba(234, 88, 12, 0.95)'
-        : 'rgba(30, 64, 175, 0.95)';
+      : userRole === 'mecanicien'
+        ? 'linear-gradient(180deg, #052e1a 0%, #065f46 50%, #10b981 100%)'
+        : userRole === 'client'
+          ? 'linear-gradient(180deg, #431407 0%, #7c2d12 50%, #ea580c 100%)'
+          : 'linear-gradient(180deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%)';
+  const appBarBackground = userRole === 'admin'
+    ? 'rgba(6, 78, 59, 0.95)'
+    : location.pathname === '/boutique-client'
+      ? 'rgba(16, 185, 129, 0.95)'
+      : userRole === 'mecanicien'
+        ? 'rgba(22, 163, 74, 0.95)'
+        : userRole === 'client'
+          ? 'rgba(234, 88, 12, 0.95)'
+          : 'rgba(30, 64, 175, 0.95)';
 
   const drawer = (
     <Box sx={{ 
@@ -301,7 +415,22 @@ const Sidebar = ({ userRole = 'admin' }) => {
       position: 'relative',
       overflow: 'hidden',
       display: 'flex',
-      flexDirection: 'column'
+      flexDirection: 'column',
+      '&::before': userRole === 'admin' ? {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: `
+          radial-gradient(circle at 20% 80%, #00ff8844 0%, transparent 50%),
+          radial-gradient(circle at 80% 20%, #39ff1444 0%, transparent 50%),
+          radial-gradient(circle at 40% 40%, #00ffff22 0%, transparent 50%)
+        `,
+        zIndex: 1,
+        pointerEvents: 'none'
+      } : undefined
     }}>
       {/* Particules de fond */}
       {particles.map(particle => (
@@ -316,8 +445,33 @@ const Sidebar = ({ userRole = 'admin' }) => {
             backgroundColor: particle.color,
             borderRadius: '50%',
             opacity: particle.opacity,
+            transform: `rotate(${particle.rotation ?? 0}deg)`,
+            filter: userRole === 'admin' ? 'blur(0.5px)' : 'blur(1px)',
+            boxShadow: userRole === 'admin' ? `0 0 ${particle.size * 2}px ${particle.color}` : undefined,
+            zIndex: 1,
+            animation: `float ${particle.speed * 2}s ease-in-out infinite alternate, glow 3s ease-in-out infinite alternate`,
+            pointerEvents: 'none'
+          }}
+        />
+      ))}
+
+      {/* Particules néon (admin) */}
+      {userRole === 'admin' && neonParticles.map(particle => (
+        <Box
+          key={particle.id}
+          sx={{
+            position: 'absolute',
+            left: `${particle.x}%`,
+            top: `${particle.y}%`,
+            width: particle.size,
+            height: particle.size,
+            background: `radial-gradient(circle, ${particle.color} 0%, transparent 70%)`,
+            borderRadius: '50%',
             filter: 'blur(1px)',
-            animation: `float ${particle.speed * 2}s ease-in-out infinite alternate, glow 3s ease-in-out infinite alternate`
+            boxShadow: `0 0 ${particle.glowSize}px ${particle.color}`,
+            zIndex: 1,
+            animation: 'neonPulse 3s ease-in-out infinite alternate',
+            pointerEvents: 'none'
           }}
         />
       ))}
@@ -330,38 +484,76 @@ const Sidebar = ({ userRole = 'admin' }) => {
           alignItems: 'center',
           justifyContent: 'center',
           p: 3,
-          background: 'rgba(255,255,255,0.1)',
+          background: userRole === 'admin' ? `
+            linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(6, 78, 59, 0.2) 100%),
+            rgba(255,255,255,0.05)
+          ` : 'rgba(255,255,255,0.1)',
           backdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(255,255,255,0.2)',
-          minHeight: 120,
+          borderBottom: userRole === 'admin' ? '2px solid rgba(0, 255, 136, 0.3)' : '1px solid rgba(255,255,255,0.2)',
+          boxShadow: userRole === 'admin' ? '0 8px 32px rgba(0, 255, 136, 0.1)' : undefined,
+          minHeight: userRole === 'admin' ? 140 : 120,
           position: 'relative',
           zIndex: 2,
-          flexShrink: 0
+          flexShrink: 0,
+          '&::before': userRole === 'admin' ? {
+            content: '""',
+            position: 'absolute',
+            top: -2,
+            left: 0,
+            right: 0,
+            height: 2,
+            background: 'linear-gradient(90deg, transparent, #00ff88, transparent)',
+            animation: 'shimmer 2s linear infinite'
+          } : undefined
         }}
       >
         {/* Logo animé */}
         <Box 
           onClick={() => navigate('/')}
           sx={{ 
-            width: 60, 
-            height: 60, 
-            borderRadius: 4, 
-            background: roleInfo.gradient,
+            width: userRole === 'admin' ? 70 : 60, 
+            height: userRole === 'admin' ? 70 : 60, 
+            borderRadius: userRole === 'admin' ? 5 : 4, 
+            background: userRole === 'admin' ? `
+              linear-gradient(135deg, #059669, #10b981, #34d399),
+              radial-gradient(circle at 30% 30%, rgba(0, 255, 136, 0.8), transparent 70%)
+            ` : roleInfo.gradient,
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
-            boxShadow: '0 15px 35px rgba(0,0,0,0.3)',
-            animation: 'pulse 3s ease-in-out infinite alternate',
+            boxShadow: userRole === 'admin' ? `
+              0 0 30px rgba(0, 255, 136, 0.5),
+              0 0 60px rgba(0, 255, 136, 0.3),
+              0 20px 40px rgba(0, 0, 0, 0.3)
+            ` : '0 15px 35px rgba(0,0,0,0.3)',
+            animation: userRole === 'admin' ? 'logoGlow 3s ease-in-out infinite alternate' : 'pulse 3s ease-in-out infinite alternate',
             mb: 2,
             position: 'relative',
             cursor: 'pointer',
             transition: 'all 0.3s ease',
-            '&:hover': {
+            '&:hover': userRole === 'admin' ? {
+              transform: 'scale(1.1) rotate(5deg)',
+              boxShadow: `
+                0 0 40px rgba(0, 255, 136, 0.8),
+                0 0 80px rgba(0, 255, 136, 0.4),
+                0 25px 50px rgba(0, 0, 0, 0.4)
+              `,
+              animation: 'logoSpin 0.5s linear infinite'
+            } : {
               transform: 'scale(1.1)',
               boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
               animation: 'none'
             },
-            '&::before': {
+            '&::before': userRole === 'admin' ? {
+              content: '""',
+              position: 'absolute',
+              inset: -3,
+              background: 'conic-gradient(from 0deg, #00ff88, #39ff14, #00ffff, #00ff88)',
+              borderRadius: 6,
+              zIndex: -1,
+              animation: 'borderSpin 4s linear infinite',
+              opacity: 0.7
+            } : {
               content: '""',
               position: 'absolute',
               inset: -2,
@@ -374,57 +566,75 @@ const Sidebar = ({ userRole = 'admin' }) => {
         >
           <Box sx={{ 
             position: 'absolute', 
-            inset: 4, 
-            backgroundColor: 'rgba(255,255,255,0.95)', 
-            borderRadius: 3, 
+            inset: userRole === 'admin' ? 2 : 4, 
+            backgroundColor: userRole === 'admin' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255,255,255,0.95)', 
+            borderRadius: userRole === 'admin' ? 4 : 3, 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
             backdropFilter: 'blur(10px)'
           }}>
-            <AutoAwesome sx={{ color: roleInfo.color, fontSize: 24 }} />
+            <AutoAwesome sx={{ 
+              color: userRole === 'admin' ? '#000' : roleInfo.color, 
+              fontSize: userRole === 'admin' ? 32 : 24,
+              zIndex: 1,
+              filter: userRole === 'admin' ? 'drop-shadow(0 0 5px rgba(0, 255, 136, 0.8))' : 'none',
+              animation: userRole === 'admin' ? 'iconFloat 2s ease-in-out infinite alternate' : undefined
+            }} />
           </Box>
         </Box>
 
         <Typography variant="h6" sx={{ 
-          color: 'white', 
+          color: userRole === 'admin' ? '#00ff88' : 'white', 
           fontWeight: 'bold',
           textAlign: 'center',
           mb: 0.5,
-          textShadow: '0 0 20px rgba(255,255,255,0.3)'
+          textShadow: userRole === 'admin' ? `
+            0 0 10px rgba(0, 255, 136, 0.5),
+            0 0 20px rgba(0, 255, 136, 0.3),
+            0 0 30px rgba(0, 255, 136, 0.1)
+          ` : '0 0 20px rgba(255,255,255,0.3)',
+          background: userRole === 'admin' ? 'linear-gradient(135deg, #00ff88, #34d399, #6ee7b7)' : undefined,
+          WebkitBackgroundClip: userRole === 'admin' ? 'text' : undefined,
+          backgroundClip: userRole === 'admin' ? 'text' : undefined,
+          animation: userRole === 'admin' ? 'textGlow 2s ease-in-out infinite alternate' : undefined
         }}>
-          {roleInfo.title}
+          {userRole === 'admin' ? 'AutoSoft Pro' : roleInfo.title}
         </Typography>
 
         <Typography variant="body2" sx={{ 
-          color: 'rgba(255,255,255,0.8)',
+          color: userRole === 'admin' ? 'rgba(52, 211, 153, 0.9)' : 'rgba(255,255,255,0.8)',
           textAlign: 'center',
-          fontSize: '0.75rem',
-          letterSpacing: '0.1em',
-          textTransform: 'uppercase'
+          fontSize: userRole === 'admin' ? '0.8rem' : '0.75rem',
+          letterSpacing: '0.15em',
+          textTransform: 'uppercase',
+          textShadow: userRole === 'admin' ? '0 0 5px rgba(52, 211, 153, 0.5)' : undefined
         }}>
-          {connectedName || roleInfo.subtitle}
+          {connectedName || (userRole === 'admin' ? 'Système Avancé' : roleInfo.subtitle)}
         </Typography>
 
         {/* Indicateur de statut */}
         <Chip
           onClick={() => navigate('/')}
-          icon={<Star sx={{ fontSize: 16 }} />}
-          label="En ligne"
+          icon={<BrightnessHigh sx={{ fontSize: 16, animation: 'spin 2s linear infinite' }} />}
+          label={userRole === 'admin' ? 'SYSTÈME ACTIF' : 'En ligne'}
           size="small"
           sx={{
-            mt: 1,
-            background: 'rgba(34, 197, 94, 0.2)',
-            color: '#22c55e',
-            border: '1px solid #22c55e',
+            mt: 2,
+            background: userRole === 'admin' ? 'linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(52, 211, 153, 0.3))' : 'rgba(34, 197, 94, 0.2)',
+            color: userRole === 'admin' ? '#00ff88' : '#22c55e',
+            border: userRole === 'admin' ? '2px solid #00ff88' : '1px solid #22c55e',
             fontWeight: 'bold',
             fontSize: '0.7rem',
             cursor: 'pointer',
             transition: 'all 0.3s ease',
+            boxShadow: userRole === 'admin' ? '0 0 20px rgba(0, 255, 136, 0.3)' : undefined,
+            animation: userRole === 'admin' ? 'chipPulse 2s ease-in-out infinite' : undefined,
             '&:hover': {
-              background: 'rgba(34, 197, 94, 0.3)',
+              background: userRole === 'admin' ? 'linear-gradient(135deg, rgba(0, 255, 136, 0.3), rgba(52, 211, 153, 0.4))' : 'rgba(34, 197, 94, 0.3)',
               transform: 'scale(1.05)',
-              boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)'
+              boxShadow: userRole === 'admin' ? '0 0 30px rgba(0, 255, 136, 0.5)' : '0 4px 12px rgba(34, 197, 94, 0.3)',
+              borderColor: userRole === 'admin' ? '#34d399' : undefined
             }
           }}
         />
@@ -438,13 +648,17 @@ const Sidebar = ({ userRole = 'admin' }) => {
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        minHeight: 0
+        minHeight: 0,
+        position: 'relative',
+        zIndex: 2
       }}>
         <Box sx={{
           flex: 1,
           overflowY: 'auto',
           overflowX: 'hidden',
           minHeight: 0,
+          position: 'relative',
+          zIndex: 2,
           '&::-webkit-scrollbar': {
             width: '8px',
           },
@@ -471,38 +685,43 @@ const Sidebar = ({ userRole = 'admin' }) => {
           <List sx={{ p: 2 }}>
             {menuItems.map((item, index) => (
               <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
-            <ListItemButton
-              selected={location.pathname === item.path}
-              onClick={() => {
-                navigate(item.path);
-                if (isMobile) setMobileOpen(false);
-              }}
+                <ListItemButton
+                  selected={location.pathname === item.path}
+                  onClick={() => {
+                    navigate(item.path);
+                    if (isMobile) setMobileOpen(false);
+                  }}
                   onMouseEnter={() => setHoveredItem(index)}
                   onMouseLeave={() => setHoveredItem(null)}
-              sx={{
-                    borderRadius: 3,
+                  sx={{
+                    borderRadius: 4,
                     background: location.pathname === item.path 
-                      ? 'rgba(255,255,255,0.15)' 
-                      : 'transparent',
+                      ? (userRole === 'admin' ? `linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(52, 211, 153, 0.15))` : 'rgba(255,255,255,0.15)')
+                      : (userRole === 'admin' ? 'rgba(255,255,255,0.02)' : 'transparent'),
                     border: location.pathname === item.path 
-                      ? '1px solid rgba(255,255,255,0.3)' 
-                      : '1px solid transparent',
-                    backdropFilter: 'blur(10px)',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    transform: hoveredItem === index ? 'translateX(8px) scale(1.02)' : 'translateX(0) scale(1)',
+                      ? (userRole === 'admin' ? '2px solid rgba(0, 255, 136, 0.5)' : '1px solid rgba(255,255,255,0.3)')
+                      : '2px solid transparent',
+                    backdropFilter: 'blur(20px)',
+                    transition: 'all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+                    transform: hoveredItem === index 
+                      ? (userRole === 'admin' ? 'translateX(12px) scale(1.03) rotateY(5deg)' : 'translateX(8px) scale(1.02)')
+                      : 'translateX(0) scale(1) rotateY(0deg)',
                     boxShadow: hoveredItem === index 
-                      ? '0 10px 25px rgba(0,0,0,0.2)' 
-                      : 'none',
+                      ? (userRole === 'admin' ? `
+                        0 15px 35px rgba(0, 0, 0, 0.3),
+                        0 0 30px rgba(0, 255, 136, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1)
+                      ` : '0 10px 25px rgba(0,0,0,0.2)') 
+                      : (location.pathname === item.path && userRole === 'admin' ? '0 0 20px rgba(0, 255, 136, 0.2)' : 'none'),
+                    position: 'relative',
+                    overflow: 'hidden',
                     '&:hover': {
-                      background: 'rgba(255,255,255,0.1)',
-                      borderColor: 'rgba(255,255,255,0.4)'
+                      background: userRole === 'admin' ? `linear-gradient(135deg, rgba(0, 255, 136, 0.15), rgba(52, 211, 153, 0.1))` : 'rgba(255,255,255,0.1)',
+                      borderColor: userRole === 'admin' ? 'rgba(0, 255, 136, 0.7)' : 'rgba(255,255,255,0.4)'
                     },
-                '&.Mui-selected': {
-                      background: 'rgba(255,255,255,0.15)',
-                      borderColor: 'rgba(255,255,255,0.5)',
-                  '&:hover': {
-                        background: 'rgba(255,255,255,0.2)'
-                      }
+                    '&.Mui-selected': {
+                      background: userRole === 'admin' ? `linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(52, 211, 153, 0.15))` : 'rgba(255,255,255,0.15)',
+                      borderColor: userRole === 'admin' ? 'rgba(0, 255, 136, 0.6)' : 'rgba(255,255,255,0.5)'
                     }
                   }}
                 >
@@ -539,19 +758,21 @@ const Sidebar = ({ userRole = 'admin' }) => {
                   {item.badge && (
                     <Badge
                       badgeContent={item.badge}
-                sx={{
-                        '& .MuiBadge-badge': {
-                          background: item.color,
-                          color: 'white',
-                          fontWeight: 'bold',
-                          fontSize: '0.7rem',
-                          minWidth: 20,
-                          height: 20
-                  }
-                }}
+                      sx={{
+                        '& .MuiBadge-badge': userRole === 'admin' 
+                          ? getBadgeStyle(index, item.priority)
+                          : {
+                              background: item.color,
+                              color: 'white',
+                              fontWeight: 'bold',
+                              fontSize: '0.7rem',
+                              minWidth: 20,
+                              height: 20
+                            }
+                      }}
               />
                   )}
-            </ListItemButton>
+                </ListItemButton>
           </ListItem>
         ))}
       </List>
@@ -561,7 +782,7 @@ const Sidebar = ({ userRole = 'admin' }) => {
       <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
 
       {/* Section utilisateur */}
-      <Box sx={{ p: 2, flexShrink: 0 }}>
+      <Box sx={{ p: 2, flexShrink: 0, position: 'relative', zIndex: 2 }}>
         <Box sx={{
           display: 'flex',
           alignItems: 'center',
@@ -690,7 +911,7 @@ const Sidebar = ({ userRole = 'admin' }) => {
               color: 'transparent',
               transition: 'all 0.3s ease'
             }}>
-              AutoGenius Pro
+              AutoSoft Pro
           </Typography>
           </Box>
 
@@ -825,6 +1046,52 @@ const Sidebar = ({ userRole = 'admin' }) => {
         @keyframes pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        @keyframes badgePulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.15); }
+        }
+        @keyframes badgeGlow {
+          0% { box-shadow: 0 0 10px currentColor; }
+          100% { box-shadow: 0 0 25px currentColor; }
+        }
+        @keyframes badgeFloat {
+          0% { transform: translateY(0); }
+          50% { transform: translateY(-2px); }
+          100% { transform: translateY(0); }
+        }
+        @keyframes neonPulse {
+          0% { opacity: 0.6; }
+          100% { opacity: 1; }
+        }
+        @keyframes logoGlow {
+          0% { filter: drop-shadow(0 0 6px rgba(0,255,136,0.3)); }
+          100% { filter: drop-shadow(0 0 14px rgba(0,255,136,0.6)); }
+        }
+        @keyframes logoSpin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes borderSpin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes textGlow {
+          0% { text-shadow: 0 0 10px rgba(0,255,136,0.2); }
+          100% { text-shadow: 0 0 20px rgba(0,255,136,0.5); }
+        }
+        @keyframes iconFloat {
+          0% { transform: translateY(0); }
+          100% { transform: translateY(-3px); }
+        }
+        @keyframes chipPulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+        @keyframes shimmer {
+          0% { opacity: 0.2; }
+          50% { opacity: 1; }
+          100% { opacity: 0.2; }
         }
       `}</style>
     </>

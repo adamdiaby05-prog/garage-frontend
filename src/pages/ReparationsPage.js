@@ -358,6 +358,7 @@ const ReparationsPage = () => {
       statCards={statCards}
       loading={loading}
       error={error}
+      colorScheme="green"
       onAdd={handleAddReparation}
       onRefresh={fetchReparations}
       onExport={handleExport}

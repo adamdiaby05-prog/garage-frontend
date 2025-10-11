@@ -80,7 +80,7 @@ const EmployesPage = () => {
     mecaniciens: 0
   });
 
-  // Génération de particules pour l'effet de fond
+  // Génération de particules pour l'effet de fond (thème admin vert)
   useEffect(() => {
     const newParticles = [];
     for (let i = 0; i < 25; i++) {
@@ -90,7 +90,7 @@ const EmployesPage = () => {
         y: Math.random() * 100,
         size: Math.random() * 4 + 1,
         speed: Math.random() * 3 + 0.5,
-        color: ['#1e40af', '#3b82f6', '#60a5fa', '#93c5fd', '#dbeafe'][Math.floor(Math.random() * 5)],
+        color: ['#064e3b', '#059669', '#10b981', '#34d399', '#a7f3d0'][Math.floor(Math.random() * 5)],
         opacity: Math.random() * 0.6 + 0.2
       });
     }
@@ -477,7 +477,7 @@ const EmployesPage = () => {
         justifyContent: 'center', 
         alignItems: 'center', 
         height: '50vh',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 25%, #2563eb 50%, #3b82f6 75%, #60a5fa 100%)'
+        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 25%, #0f172a 50%, #1e293b 75%, #0a0a0a 100%)'
       }}>
         <CircularProgress sx={{ color: 'white' }} />
       </Box>
@@ -496,7 +496,7 @@ const EmployesPage = () => {
     <Box sx={{ 
       flexGrow: 1, 
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 25%, #2563eb 50%, #3b82f6 75%, #60a5fa 100%)',
+      background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 25%, #0f172a 50%, #1e293b 75%, #0a0a0a 100%)',
       position: 'relative',
       overflow: 'hidden'
     }}>
@@ -529,16 +529,16 @@ const EmployesPage = () => {
       }} />
 
       <Box sx={{ position: 'relative', zIndex: 10, p: 4 }}>
-        {/* Header avec animation */}
+        {/* Header avec animation - thème admin */}
         <Box sx={{ textAlign: 'center', mb: 6 }}>
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 3, mb: 3 }}>
             <Box sx={{ 
               width: 80, 
               height: 80, 
-              background: 'linear-gradient(135deg, #1e40af, #2563eb, #3b82f6)', 
+              background: 'linear-gradient(135deg, #059669, #10b981, #34d399)', 
               borderRadius: 4, 
               transform: 'rotate(12deg) perspective(1000px) rotateY(15deg)', 
-              boxShadow: '0 20px 40px rgba(59,130,246,0.4), 0 0 0 1px rgba(255,255,255,0.1)', 
+              boxShadow: '0 20px 40px rgba(16,185,129,0.35), 0 0 0 1px rgba(255,255,255,0.1)', 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
@@ -548,7 +548,7 @@ const EmployesPage = () => {
                 content: '""',
                 position: 'absolute',
                 inset: -2,
-                background: 'linear-gradient(45deg, #1e40af, #3b82f6, #60a5fa, #93c5fd)',
+                background: 'linear-gradient(45deg, #059669, #10b981, #34d399, #6ee7b7)',
                 borderRadius: 6,
                 zIndex: -1,
                 animation: 'spin 4s linear infinite reverse'
@@ -564,20 +564,20 @@ const EmployesPage = () => {
                 justifyContent: 'center',
                 backdropFilter: 'blur(10px)'
               }}>
-                <Person sx={{ color: '#1976d2', fontSize: 32 }} />
+                <Person sx={{ color: '#10b981', fontSize: 32 }} />
               </Box>
             </Box>
             <Box>
               <Typography variant="h2" sx={{ 
                 fontWeight: 900, 
-                background: 'linear-gradient(135deg, #fff, #93c5fd, #dbeafe)', 
+                background: 'linear-gradient(135deg, #eafff6, #a7f3d0, #6ee7b7)', 
                 WebkitBackgroundClip: 'text', 
                 color: 'transparent',
                 animation: 'pulse 3s infinite, glow 2s ease-in-out infinite alternate',
-                textShadow: '0 0 30px rgba(147, 197, 253, 0.5)',
+                textShadow: '0 0 30px rgba(16,185,129,0.35)',
                 letterSpacing: '0.1em'
               }}>
-        Gestion des Employés
+                Gestion des Employés
       </Typography>
               <Typography variant="h6" sx={{ 
                 color: 'rgba(255,255,255,0.9)',
@@ -671,19 +671,19 @@ const EmployesPage = () => {
               startIcon={<Add />}
               onClick={handleAddEmploye}
               sx={{
-                background: 'linear-gradient(135deg, #1e40af, #2563eb)',
+                background: 'linear-gradient(135deg, #059669, #10b981)',
                 borderRadius: 3,
                 py: 1.5,
                 px: 3,
                 fontWeight: 'bold',
                 fontSize: '1rem',
-                boxShadow: '0 10px 25px rgba(37, 99, 235, 0.4)',
+                boxShadow: '0 10px 25px rgba(16,185,129,0.3)',
                 border: '2px solid rgba(255,255,255,0.2)',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
                   transform: 'translateY(-3px)',
-                  boxShadow: '0 20px 40px rgba(37, 99, 235, 0.6)',
-                  background: 'linear-gradient(135deg, #1e3a8a, #1d4ed8)'
+                  boxShadow: '0 20px 40px rgba(16,185,129,0.45)',
+                  background: 'linear-gradient(135deg, #047857, #059669)'
                 }
               }}
             >
@@ -806,7 +806,7 @@ const EmployesPage = () => {
                       borderWidth: '2px'
                     },
                     '&.Mui-focused fieldset': { 
-                      borderColor: '#60a5fa',
+                      borderColor: '#10b981',
                       borderWidth: '3px'
                     }
                   },

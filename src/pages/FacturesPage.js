@@ -188,6 +188,7 @@ const FacturesPage = () => {
       }, 150);
     }, 50);
   };
+  
 
   const handleDeleteFacture = async (facture) => {
     if (!facture) return;
@@ -253,10 +254,10 @@ const FacturesPage = () => {
           title: 'Total Factures', 
           value: stats.total, 
           icon: <Receipt />, 
-          gradient: 'linear-gradient(135deg, #1e40af, #3b82f6)' 
+          gradient: 'linear-gradient(135deg, #059669, #10b981)' 
         }
       ]}
-      colorScheme="blue"
+      colorScheme="green"
       onRefresh={fetchFactures}
     >
       {/* Filtres */}

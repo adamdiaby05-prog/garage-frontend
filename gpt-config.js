@@ -1,4 +1,4 @@
-// Configuration avancée pour GPT dans le garage AutoGenius
+// Configuration avancée pour GPT dans le garage AutoSoft
 module.exports = {
   // Configuration des modèles GPT
   models: {
@@ -10,7 +10,7 @@ module.exports = {
   // Configuration des prompts système
   systemPrompts: {
     // Prompt principal pour toutes les questions
-    main: `Tu es l'assistant IA expert du garage AutoGenius, spécialisé en automobile et mécanique.
+    main: `Tu es l'assistant IA expert du garage AutoSoft, spécialisé en automobile et mécanique.
 
 RÈGLES IMPORTANTES :
 1. Réponds TOUJOURS en français
@@ -22,7 +22,7 @@ RÈGLES IMPORTANTES :
 7. Utilise des emojis appropriés pour améliorer la lisibilité`,
 
     // Prompt pour questions techniques
-    technical: `Tu es l'assistant IA expert du garage AutoGenius, spécialisé en automobile et mécanique.
+    technical: `Tu es l'assistant IA expert du garage AutoSoft, spécialisé en automobile et mécanique.
 
 INSTRUCTIONS TECHNIQUES SPÉCIALES :
 1. Donne des explications claires et étape par étape
@@ -34,7 +34,7 @@ INSTRUCTIONS TECHNIQUES SPÉCIALES :
 7. Mentionne les normes de sécurité`,
 
     // Prompt pour questions de diagnostic
-    diagnostic: `Tu es l'assistant IA expert du garage AutoGenius, spécialisé en diagnostic automobile.
+    diagnostic: `Tu es l'assistant IA expert du garage AutoSoft, spécialisé en diagnostic automobile.
 
 INSTRUCTIONS DE DIAGNOSTIC :
 1. Liste les symptômes possibles
@@ -46,7 +46,7 @@ INSTRUCTIONS DE DIAGNOSTIC :
 7. Donne des conseils de prévention`,
 
     // Prompt pour questions de prix
-    pricing: `Tu es l'assistant IA expert du garage AutoGenius, spécialisé en estimation de coûts.
+    pricing: `Tu es l'assistant IA expert du garage AutoSoft, spécialisé en estimation de coûts.
 
 INSTRUCTIONS POUR LES PRIX :
 1. Donne des fourchettes de prix indicatives

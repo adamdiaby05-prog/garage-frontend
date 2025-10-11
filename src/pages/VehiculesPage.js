@@ -274,12 +274,7 @@ const VehiculesPage = () => {
       statCards={statCards}
       loading={loading}
       error={error}
-      colorScheme={(() => {
-        try {
-          const u = JSON.parse(localStorage.getItem('user') || '{}');
-          return u.role === 'mecanicien' ? 'green' : 'blue';
-        } catch { return 'blue'; }
-      })()}
+      colorScheme="green"
       onAdd={handleAddVehicule}
       onRefresh={fetchVehicules}
       onExport={handleExport}

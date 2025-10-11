@@ -652,7 +652,7 @@ app.post('/api/ai/chat', async (req, res) => {
         // Si c'est une question technique, ajouter des instructions spéciales
         const isTechnicalQuestion = /comment|pourquoi|quand|où|combien|définition|procédure|diagnostic|panne|entretien/.test(message.toLowerCase());
         
-        let systemPrompt = `Tu es l'assistant IA expert du garage AutoGenius. Tu DOIS utiliser les données de la base fournies ci-dessous.
+        let systemPrompt = `Tu es l'assistant IA expert du garage AutoSoft. Tu DOIS utiliser les données de la base fournies ci-dessous.
 
 RÈGLES OBLIGATOIRES :
 1. Réponds TOUJOURS en français
@@ -3674,9 +3674,10 @@ async function startServer() {
   await ensureUsersTable();
   await ensureGaragesTables();
   
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Serveur démarré sur le port ${PORT}`);
     console.log(`📊 API disponible sur http://localhost:${PORT}/api`);
+    console.log(`🌐 Accès LAN: http://0.0.0.0:${PORT}/api (utilisez l'IP de votre PC)`);
   });
 }
 

@@ -160,7 +160,7 @@ const HomePage = () => {
                 </div>
               </div>
               <div className="logo-text">
-                <h1>AutoGenius</h1>
+                <h1>AutoSoft</h1>
                 <span>Dark Edition</span>
               </div>
             </div>
@@ -319,9 +319,9 @@ const HomePage = () => {
               <div className="footer-logo-icon">
                 <DirectionsCar />
               </div>
-              <span>AutoGenius</span>
+              <span>AutoSoft</span>
             </div>
-            <p>© 2024 AutoGenius - L'avenir du garage management 🚗</p>
+            <p>© 2024 AutoSoft - L'avenir du garage management 🚗</p>
           </div>
         </div>
       </footer>

@@ -132,7 +132,7 @@ const LoginPage = () => {
       }}>
         <img 
           src="/R.jpg" 
-          alt="Promotion AutoGenius" 
+          alt="Promotion AutoSoft" 
           style={{
             width: '100%',
             height: '100%',
