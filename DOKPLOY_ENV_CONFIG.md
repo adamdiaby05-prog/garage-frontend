@@ -5,6 +5,8 @@
 CI=false
 GENERATE_SOURCEMAP=false
 NODE_ENV=production
+HOST=0.0.0.0
+DANGEROUSLY_DISABLE_HOST_CHECK=true
 REACT_APP_API_BASE_URL=https://your-backend-url.com/api
 
 # Configuration Docker :

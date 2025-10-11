@@ -16,6 +16,8 @@ COPY . .
 # Définir les variables d'environnement pour le build
 ENV CI=false
 ENV GENERATE_SOURCEMAP=false
+ENV HOST=0.0.0.0
+ENV DANGEROUSLY_DISABLE_HOST_CHECK=true
 
 # Construire l'application
 RUN npm run build
