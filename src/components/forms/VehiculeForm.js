@@ -7,263 +7,522 @@ import {
   TextField,
   Button,
   Grid,
-  MenuItem,
   FormControl,
   InputLabel,
   Select,
-  Alert,
-  CircularProgress
+  MenuItem,
+  Box,
+  Typography,
+  CircularProgress,
+  Alert
 } from '@mui/material';
-import { vehiculesAPI, clientsAPI } from '../../services/api';
+import { AddAPhoto, Image } from '@mui/icons-material';
+import { vehiculesAPI } from '../../services/vehiculesAPI';
 
-const VehiculeForm = ({ open, onClose, onSuccess, vehicule = null, fixedClientId = null }) => {
+const VehiculeForm = ({ open, onClose, onSuccess, vehicule = null }) => {
   const [formData, setFormData] = useState({
-    id_client: fixedClientId || vehicule?.id_client || '',
-    marque: vehicule?.marque || '',
-    modele: vehicule?.modele || '',
-    numero_immatriculation: vehicule?.numero_immatriculation || '',
-    numero_chassis: vehicule?.numero_chassis || '',
-    couleur: vehicule?.couleur || '',
-    annee: vehicule?.annee || '',
-    kilometrage: vehicule?.kilometrage || '',
-    carburant: vehicule?.carburant || 'essence'
+    marque: '',
+    modele: '',
+    annee: new Date().getFullYear(),
+    couleur: '',
+    prix_vente: '',
+    prix_location_jour: '',
+    kilometrage: '',
+    carburant: 'Essence',
+    transmission: 'Manuelle',
+    puissance: '',
+    description: '',
+    image_principale: '',
+    statut: 'disponible',
+    type_vente: 'vente_et_location'
   });
-  const [clients, setClients] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
-  const carburants = [
-    { value: 'essence', label: 'Essence' },
-    { value: 'diesel', label: 'Diesel' },
-    { value: 'hybride', label: 'Hybride' },
-    { value: 'electrique', label: 'Électrique' }
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [imagePreview, setImagePreview] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+
+  // Options pour les selects
+  const marques = [
+    'Toyota', 'BMW', 'Mercedes', 'Audi', 'Peugeot', 'Renault', 
+    'Volkswagen', 'Ford', 'Nissan', 'Honda', 'Hyundai', 'Kia'
   ];
 
-  // Charger la liste des clients
-  useEffect(() => {
-    if (fixedClientId) {
-      // Si un client est imposé, inutile de charger toute la liste
-      setClients([]);
-      setFormData(prev => ({ ...prev, id_client: fixedClientId }));
-      return;
-    }
-    const fetchClients = async () => {
-      try {
-        const response = await clientsAPI.getAll();
-        setClients(response.data);
-      } catch (err) {
-        console.error('Erreur lors du chargement des clients:', err);
-      }
-    };
-    fetchClients();
-  }, [fixedClientId]);
+  const couleurs = [
+    'Blanc', 'Noir', 'Gris', 'Argent', 'Rouge', 'Bleu', 
+    'Vert', 'Jaune', 'Orange', 'Marron', 'Beige'
+  ];
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  const carburants = ['Essence', 'Diesel', 'Hybride', 'Électrique'];
+  const transmissions = ['Manuelle', 'Automatique', 'Semi-automatique'];
+  const statuts = ['disponible', 'vendu', 'loue', 'maintenance'];
+  const typesVente = ['vente', 'location', 'vente_et_location'];
+
+  // Charger les données du véhicule si en mode édition
+  useEffect(() => {
+    if (vehicule) {
+      setFormData({
+        marque: vehicule.marque || '',
+        modele: vehicule.modele || '',
+        annee: vehicule.annee || new Date().getFullYear(),
+        couleur: vehicule.couleur || '',
+        prix_vente: vehicule.prix_vente || '',
+        prix_location_jour: vehicule.prix_location_jour || '',
+        kilometrage: vehicule.kilometrage || '',
+        carburant: vehicule.carburant || 'Essence',
+        transmission: vehicule.transmission || 'Manuelle',
+        puissance: vehicule.puissance || '',
+        description: vehicule.description || '',
+        image_principale: vehicule.image_principale || '',
+        statut: vehicule.statut || 'disponible',
+        type_vente: vehicule.type_vente || 'vente_et_location'
+      });
+      setImagePreview(vehicule.image_principale || '');
+    } else {
+      // Réinitialiser le formulaire pour un nouveau véhicule
+      setFormData({
+        marque: '',
+        modele: '',
+        annee: new Date().getFullYear(),
+        couleur: '',
+        prix_vente: '',
+        prix_location_jour: '',
+        kilometrage: '',
+        carburant: 'Essence',
+        transmission: 'Manuelle',
+        puissance: '',
+        description: '',
+        image_principale: '',
+        statut: 'disponible',
+        type_vente: 'vente_et_location'
+      });
+      setImagePreview('');
+    }
+    setImageFile(null);
+    setErrors({});
+  }, [vehicule, open]);
+
+  // Gérer les changements dans les champs
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Effacer l'erreur du champ modifié
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
   };
 
+  // Gérer l'upload d'image depuis le PC
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Vérifier le type de fichier
+      if (!file.type.startsWith('image/')) {
+        setErrors(prev => ({ ...prev, image: 'Veuillez sélectionner un fichier image valide' }));
+        return;
+      }
+
+      // Vérifier la taille (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors(prev => ({ ...prev, image: 'L\'image ne doit pas dépasser 5MB' }));
+      return;
+    }
+
+      setImageFile(file);
+      
+      // Créer un aperçu de l'image
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target.result);
+        setFormData(prev => ({ ...prev, image_principale: e.target.result }));
+      };
+      reader.readAsDataURL(file);
+      
+      // Effacer l'erreur d'image
+      if (errors.image) {
+        setErrors(prev => ({ ...prev, image: '' }));
+      }
+    }
+  };
+
+  // Gérer le changement d'URL d'image
+  const handleImageUrlChange = (url) => {
+    setFormData(prev => ({ ...prev, image_principale: url }));
+    setImagePreview(url);
+    setImageFile(null);
+    
+    // Effacer l'erreur d'image
+    if (errors.image) {
+      setErrors(prev => ({ ...prev, image: '' }));
+    }
+  };
+
+  // Validation du formulaire
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.marque.trim()) newErrors.marque = 'La marque est requise';
+    if (!formData.modele.trim()) newErrors.modele = 'Le modèle est requis';
+    if (!formData.couleur.trim()) newErrors.couleur = 'La couleur est requise';
+    if (!formData.prix_vente || formData.prix_vente <= 0) {
+      newErrors.prix_vente = 'Le prix de vente doit être supérieur à 0';
+    }
+    if (!formData.prix_location_jour || formData.prix_location_jour <= 0) {
+      newErrors.prix_location_jour = 'Le prix de location doit être supérieur à 0';
+    }
+    if (formData.annee < 1900 || formData.annee > new Date().getFullYear() + 1) {
+      newErrors.annee = 'L\'année doit être valide';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Soumettre le formulaire
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
-    setError('');
-
     try {
-      // Normaliser l'immatriculation (trim + upper)
-      const normalizedImmatriculation = (formData.numero_immatriculation || '')
-        .trim()
-        .toUpperCase();
-
-      const dataToSend = {
-        marque: formData.marque,
-        modele: formData.modele,
-        annee: formData.annee ? parseInt(formData.annee) : null,
-        immatriculation: normalizedImmatriculation,
-        numero_chassis: formData.numero_chassis,
-        couleur: formData.couleur,
-        kilometrage: formData.kilometrage ? parseInt(formData.kilometrage) : null,
-        carburant: formData.carburant,
-        client_id: formData.id_client || null
-      };
-
       if (vehicule) {
-        await vehiculesAPI.update(vehicule.id_vehicule || vehicule.id, dataToSend);
+        // Mise à jour
+        await vehiculesAPI.update(vehicule.id, formData);
       } else {
-        await vehiculesAPI.create(dataToSend);
+        // Création
+        await vehiculesAPI.create(formData);
       }
+      
       onSuccess();
-      onClose();
-    } catch (err) {
-      console.error('Erreur:', err);
-      // Gestion dédiée des conflits (immatriculation dupliquée, etc.)
-      if (err.response?.status === 409) {
-        const apiMsg = err.response?.data?.error || 'Conflit de données';
-        setError(
-          apiMsg.includes('immatriculation')
-            ? "Cette immatriculation existe déjà. Veuillez en saisir une autre."
-            : apiMsg
-        );
-      } else if (err.response?.data?.error) {
-        setError(err.response.data.error);
-      } else if (err.message) {
-        setError(err.message);
-      } else {
-        setError("Erreur lors de l'enregistrement du véhicule");
-      }
+      handleClose();
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      setErrors({ submit: 'Erreur lors de la sauvegarde du véhicule' });
     } finally {
       setLoading(false);
     }
   };
 
+  // Fermer le formulaire
   const handleClose = () => {
     setFormData({
-      id_client: '',
       marque: '',
       modele: '',
-      numero_immatriculation: '',
-      numero_chassis: '',
+      annee: new Date().getFullYear(),
       couleur: '',
-      annee: '',
+      prix_vente: '',
+      prix_location_jour: '',
       kilometrage: '',
-      carburant: 'essence'
+      carburant: 'Essence',
+      transmission: 'Manuelle',
+      puissance: '',
+      description: '',
+      image_principale: '',
+      statut: 'disponible',
+      type_vente: 'vente_et_location'
     });
-    setError('');
+    setImagePreview('');
+    setImageFile(null);
+    setErrors({});
     onClose();
   };
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        {vehicule ? 'Modifier le Véhicule' : 'Nouveau Véhicule'}
+        {vehicule ? 'Modifier le véhicule' : 'Nouveau véhicule'}
       </DialogTitle>
+      
       <form onSubmit={handleSubmit}>
         <DialogContent>
-          {error && (
+          {errors.submit && (
             <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
+              {errors.submit}
             </Alert>
           )}
+
           <Grid container spacing={2}>
-            {!fixedClientId && (
-              <Grid item xs={12}>
-                <FormControl fullWidth margin="normal" required>
-                  <InputLabel>Client *</InputLabel>
+            {/* Marque */}
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth error={!!errors.marque}>
+                <InputLabel>Marque *</InputLabel>
                   <Select
-                    name="id_client"
-                    value={formData.id_client}
-                    onChange={handleChange}
-                  >
-                    {clients.map((client) => {
-                      const value = client.id ?? client.id_client;
-                      const labelNom = [client.nom, client.prenom].filter(Boolean).join(' ').trim();
-                      return (
-                        <MenuItem key={value} value={value}>
-                          {labelNom || `Client #${value}`} {client.telephone ? `- ${client.telephone}` : ''}
+                  value={formData.marque}
+                  onChange={(e) => handleChange('marque', e.target.value)}
+                  label="Marque *"
+                >
+                  {marques.map((marque) => (
+                    <MenuItem key={marque} value={marque}>
+                      {marque}
                         </MenuItem>
-                      );
-                    })}
+                  ))}
                   </Select>
                 </FormControl>
+              {errors.marque && (
+                <Typography variant="caption" color="error">
+                  {errors.marque}
+                </Typography>
+              )}
               </Grid>
-            )}
+
+            {/* Modèle */}
             <Grid item xs={12} sm={6}>
               <TextField
-                name="marque"
-                label="Marque *"
-                value={formData.marque}
-                onChange={handleChange}
                 fullWidth
-                required
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                name="modele"
                 label="Modèle *"
                 value={formData.modele}
-                onChange={handleChange}
-                fullWidth
-                required
-                margin="normal"
+                onChange={(e) => handleChange('modele', e.target.value)}
+                error={!!errors.modele}
+                helperText={errors.modele}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+
+            {/* Année */}
+            <Grid item xs={12} sm={4}>
               <TextField
-                name="numero_immatriculation"
-                label="Numéro d'immatriculation *"
-                value={formData.numero_immatriculation}
-                onChange={handleChange}
                 fullWidth
-                required
-                margin="normal"
-                inputProps={{ style: { textTransform: 'uppercase' } }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                name="numero_chassis"
-                label="Numéro de chassis"
-                value={formData.numero_chassis}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                name="couleur"
-                label="Couleur"
-                value={formData.couleur}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                name="annee"
-                label="Année"
+                label="Année *"
                 type="number"
                 value={formData.annee}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
+                onChange={(e) => handleChange('annee', parseInt(e.target.value) || '')}
+                error={!!errors.annee}
+                helperText={errors.annee}
                 inputProps={{ min: 1900, max: new Date().getFullYear() + 1 }}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+
+            {/* Couleur */}
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth error={!!errors.couleur}>
+                <InputLabel>Couleur *</InputLabel>
+                <Select
+                  value={formData.couleur}
+                  onChange={(e) => handleChange('couleur', e.target.value)}
+                  label="Couleur *"
+                >
+                  {couleurs.map((couleur) => (
+                    <MenuItem key={couleur} value={couleur}>
+                      {couleur}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              {errors.couleur && (
+                <Typography variant="caption" color="error">
+                  {errors.couleur}
+                </Typography>
+              )}
+            </Grid>
+
+            {/* Kilométrage */}
+            <Grid item xs={12} sm={4}>
               <TextField
-                name="kilometrage"
+                fullWidth
                 label="Kilométrage"
                 type="number"
                 value={formData.kilometrage}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
+                onChange={(e) => handleChange('kilometrage', parseInt(e.target.value) || '')}
                 inputProps={{ min: 0 }}
               />
             </Grid>
+
+            {/* Prix de vente */}
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth margin="normal">
+              <TextField
+                fullWidth
+                label="Prix de vente (FCFA) *"
+                type="number"
+                value={formData.prix_vente}
+                onChange={(e) => handleChange('prix_vente', parseFloat(e.target.value) || '')}
+                error={!!errors.prix_vente}
+                helperText={errors.prix_vente}
+                inputProps={{ min: 0 }}
+              />
+            </Grid>
+
+            {/* Prix de location */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Prix de location/jour (FCFA) *"
+                type="number"
+                value={formData.prix_location_jour}
+                onChange={(e) => handleChange('prix_location_jour', parseFloat(e.target.value) || '')}
+                error={!!errors.prix_location_jour}
+                helperText={errors.prix_location_jour}
+                inputProps={{ min: 0 }}
+              />
+            </Grid>
+
+            {/* Carburant */}
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth>
                 <InputLabel>Carburant</InputLabel>
                 <Select
-                  name="carburant"
                   value={formData.carburant}
-                  onChange={handleChange}
+                  onChange={(e) => handleChange('carburant', e.target.value)}
+                  label="Carburant"
                 >
                   {carburants.map((carburant) => (
-                    <MenuItem key={carburant.value} value={carburant.value}>
-                      {carburant.label}
+                    <MenuItem key={carburant} value={carburant}>
+                      {carburant}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Grid>
+
+            {/* Transmission */}
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth>
+                <InputLabel>Transmission</InputLabel>
+                <Select
+                  value={formData.transmission}
+                  onChange={(e) => handleChange('transmission', e.target.value)}
+                  label="Transmission"
+                >
+                  {transmissions.map((transmission) => (
+                    <MenuItem key={transmission} value={transmission}>
+                      {transmission}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Puissance */}
+            <Grid item xs={12} sm={4}>
+              <TextField
+                fullWidth
+                label="Puissance (CV)"
+                value={formData.puissance}
+                onChange={(e) => handleChange('puissance', e.target.value)}
+              />
+            </Grid>
+
+            {/* Statut */}
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Statut</InputLabel>
+                <Select
+                  value={formData.statut}
+                  onChange={(e) => handleChange('statut', e.target.value)}
+                  label="Statut"
+                >
+                  {statuts.map((statut) => (
+                    <MenuItem key={statut} value={statut}>
+                      {statut}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Type de vente */}
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Type de vente</InputLabel>
+                <Select
+                  value={formData.type_vente}
+                  onChange={(e) => handleChange('type_vente', e.target.value)}
+                  label="Type de vente"
+                >
+                  {typesVente.map((type) => (
+                    <MenuItem key={type} value={type}>
+                      {type}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Description */}
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                multiline
+                rows={3}
+                value={formData.description}
+                onChange={(e) => handleChange('description', e.target.value)}
+              />
+            </Grid>
+
+            {/* Image */}
+            <Grid item xs={12}>
+              <Typography variant="h6" sx={{ mb: 2, color: '#00ff88' }}>
+                Image du véhicule
+              </Typography>
+              
+              {/* Aperçu de l'image */}
+              {imagePreview && (
+                <Box sx={{ mb: 2, textAlign: 'center' }}>
+                  <img
+                    src={imagePreview}
+                    alt="Aperçu"
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '200px',
+                      borderRadius: '8px',
+                      border: '2px solid #00ff88',
+                      objectFit: 'cover'
+                    }}
+                  />
+                </Box>
+              )}
+              
+              {/* Upload depuis le PC */}
+              <Box sx={{ mb: 2 }}>
+                <input
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  id="image-upload"
+                  type="file"
+                  onChange={handleImageUpload}
+                />
+                <label htmlFor="image-upload">
+                  <Button
+                    variant="outlined"
+                    component="span"
+                    startIcon={<AddAPhoto />}
+                    sx={{
+                      borderColor: '#00ff88',
+                      color: '#00ff88',
+                      '&:hover': {
+                        borderColor: '#00cc6a',
+                        backgroundColor: 'rgba(0, 255, 136, 0.1)'
+                      }
+                    }}
+                  >
+                    Choisir une image depuis votre PC
+                  </Button>
+                </label>
+                {imageFile && (
+                  <Typography variant="caption" sx={{ ml: 2, color: '#00ff88' }}>
+                    Fichier sélectionné: {imageFile.name}
+                  </Typography>
+                )}
+              </Box>
+              
+              {/* Ou URL */}
+              <Typography variant="body2" sx={{ mb: 1, color: '#666' }}>
+                Ou entrez une URL d'image:
+              </Typography>
+              <TextField
+                fullWidth
+                label="URL de l'image"
+                value={formData.image_principale}
+                onChange={(e) => handleImageUrlChange(e.target.value)}
+                placeholder="https://example.com/image.jpg"
+                error={!!errors.image}
+                helperText={errors.image}
+              />
+            </Grid>
           </Grid>
         </DialogContent>
+
         <DialogActions>
           <Button onClick={handleClose} disabled={loading}>
             Annuler
@@ -271,22 +530,22 @@ const VehiculeForm = ({ open, onClose, onSuccess, vehicule = null, fixedClientId
           <Button
             type="submit"
             variant="contained"
-            disabled={
-              loading ||
-              (!fixedClientId && !formData.id_client) ||
-              !formData.marque ||
-              !formData.modele ||
-              !formData.numero_immatriculation
-            }
-            startIcon={loading ? <CircularProgress size={20} /> : null}
+            disabled={loading}
             sx={{
-              minWidth: 120,
-              '&:disabled': {
-                opacity: 0.6
+              background: 'linear-gradient(45deg, #00ff88, #00cc6a)',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #00cc6a, #00aa55)'
               }
             }}
           >
-            {loading ? 'En cours...' : (vehicule ? 'Modifier' : 'Ajouter')}
+            {loading ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CircularProgress size={20} color="inherit" />
+                Sauvegarde...
+              </Box>
+            ) : (
+              vehicule ? 'Modifier' : 'Créer'
+            )}
           </Button>
         </DialogActions>
       </form>

@@ -9,7 +9,6 @@ import {
   Chip,
   Snackbar,
   Alert,
-  CircularProgress,
   FormControl,
   InputLabel,
   Select,
@@ -17,177 +16,384 @@ import {
   Grid,
   Card,
   CardContent,
-  CardActions
+  CardActions,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Badge
 } from '@mui/material';
 import {
   Add,
   Edit,
   Delete,
   Search,
-  ShoppingCart,
   Star,
   Visibility,
   Store,
-  PhotoCamera
+  CloudUpload,
+  Image as ImageIcon,
+  TrendingUp,
+  Inventory
 } from '@mui/icons-material';
-import * as XLSX from 'xlsx';
-import ProduitForm from '../components/forms/ProduitForm';
-import ModernPageTemplate from '../components/ModernPageTemplate';
-import PhotoManager from '../components/PhotoManager';
 
 const BoutiquePage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categorieFilter, setCategorieFilter] = useState('all');
   const [produits, setProduits] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const [isAdmin, setIsAdmin] = useState(false);
   
   // États pour le formulaire
   const [showForm, setShowForm] = useState(false);
   const [selectedProduit, setSelectedProduit] = useState(null);
+  const [productType, setProductType] = useState('voiture'); // 'voiture' ou 'piece'
+  const [formData, setFormData] = useState({
+    nom: '',
+    description: '',
+    prix: '',
+    stock: '',
+    categorie: '',
+    marque: '',
+    reference: '',
+    image: '',
+    // Champs spécifiques voiture
+    modele: '',
+    annee: '',
+    couleur: '',
+    kilometrage: '',
+    carburant: 'essence',
+    transmission: 'manuelle',
+    puissance: '',
+    statut: 'disponible',
+    type_vente: 'vente'
+  });
+  const [imagePreview, setImagePreview] = useState('');
   
-  // États pour le gestionnaire de photos
-  const [photoManagerOpen, setPhotoManagerOpen] = useState(false);
-  const [selectedProduitForPhotos, setSelectedProduitForPhotos] = useState(null);
+  // États pour la prévisualisation
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewSrc, setPreviewSrc] = useState('');
   const [isZoomed, setIsZoomed] = useState(false);
 
-  // Charger les produits depuis la base de données
+  // Fonction pour récupérer les produits depuis l'API
+  function fetchProduits() {
+    return (async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/boutique/vehicules');
+        if (response.ok) {
+          const data = await response.json();
+          setProduits(data);
+        } else {
+          console.error('Erreur lors du chargement des produits:', response.status);
+          setSnackbar({ open: true, message: 'Erreur lors du chargement des produits', severity: 'error' });
+        }
+      } catch (error) {
+        console.error('Erreur fetchProduits:', error);
+        setSnackbar({ open: true, message: 'Erreur de connexion', severity: 'error' });
+      }
+    })();
+  }
+
+  // Charger les produits au montage du composant
   useEffect(() => {
     fetchProduits();
-    try {
-      const u = JSON.parse(localStorage.getItem('user') || '{}');
-      setIsAdmin((u?.role || '').toLowerCase() === 'admin');
-    } catch {}
   }, []);
 
   // Fonction pour générer une image SVG par défaut
-  const generateDefaultImage = (categorie, nom) => {
+  function generateDefaultImage(marque, nom) {
     const colors = {
-      'filtres': '#10b981',
-      'freinage': '#ef4444',
-      'électricité': '#f59e0b',
-      'moteur': '#8b5cf6',
-      'suspension': '#06b6d4',
-      'carrosserie': '#84cc16',
-      'entretien': '#f97316',
-      'test': '#6b7280'
+      'Toyota': '#e60012',
+      'BMW': '#0066cc',
+      'Mercedes': '#00adef',
+      'Audi': '#bb0a30',
+      'Peugeot': '#002395',
+      'Renault': '#ffcc00',
+      'Volkswagen': '#1f2937',
+      'Ford': '#003478',
+      'Nissan': '#c8102f',
+      'Honda': '#c8102e',
+      'Hyundai': '#002c5f',
+      'Kia': '#05141f'
     };
     
-    const color = colors[categorie?.toLowerCase()] || '#6b7280';
-    const initial = (categorie || nom || 'P').charAt(0).toUpperCase();
+    const color = colors[marque] || '#10b981';
+    const initial = (marque || nom || 'V').charAt(0).toUpperCase();
     
-    const svg = `<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg">
-      <rect width="60" height="60" fill="${color}" rx="8"/>
-      <text x="30" y="35" font-family="Arial, sans-serif" font-size="24" font-weight="bold" 
+    const svg = `<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="grad${initial}" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:${color};stop-opacity:1" />
+          <stop offset="100%" style="stop-color:${color}dd;stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      <rect width="200" height="200" fill="url(#grad${initial})" rx="16"/>
+      <circle cx="100" cy="100" r="60" fill="rgba(255,255,255,0.1)"/>
+      <text x="100" y="115" font-family="Arial, sans-serif" font-size="64" font-weight="bold" 
             text-anchor="middle" dominant-baseline="middle" fill="white">${initial}</text>
     </svg>`;
     
-    return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
-  };
+    // Utiliser des URLs d'images réelles au lieu de Base64
+    const defaultImages = {
+      'Toyota': 'https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=400&h=300&fit=crop',
+      'BMW': 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&h=300&fit=crop',
+      'Mercedes': 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=400&h=300&fit=crop',
+      'Audi': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'Peugeot': 'https://images.unsplash.com/photo-1549317336-206569e8475c?w=400&h=300&fit=crop',
+      'Renault': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'Volkswagen': 'https://images.unsplash.com/photo-1549399902-5ec3c2c0f56c?w=400&h=300&fit=crop',
+      'Ford': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+      'Nissan': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'Honda': 'https://images.unsplash.com/photo-1549317336-206569e8475c?w=400&h=300&fit=crop',
+      'Hyundai': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+      'Kia': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'Mazda': 'https://images.unsplash.com/photo-1549399902-5ec3c2c0f56c?w=400&h=300&fit=crop',
+      'Subaru': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'Lexus': 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&h=300&fit=crop',
+      'Infiniti': 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=400&h=300&fit=crop',
+      'Acura': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'Genesis': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+      'Lincoln': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'Cadillac': 'https://images.unsplash.com/photo-1549399902-5ec3c2c0f56c?w=400&h=300&fit=crop',
+      'Buick': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'Chevrolet': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+      'GMC': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'Dodge': 'https://images.unsplash.com/photo-1549399902-5ec3c2c0f56c?w=400&h=300&fit=crop',
+      'Chrysler': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'Jeep': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+      'Ram': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'Alfa Romeo': 'https://images.unsplash.com/photo-1549399902-5ec3c2c0f56c?w=400&h=300&fit=crop',
+      'Fiat': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'Maserati': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+      'Ferrari': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'Lamborghini': 'https://images.unsplash.com/photo-1549399902-5ec3c2c0f56c?w=400&h=300&fit=crop',
+      'Porsche': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'Bentley': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+      'Rolls-Royce': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'Aston Martin': 'https://images.unsplash.com/photo-1549399902-5ec3c2c0f56c?w=400&h=300&fit=crop',
+      'McLaren': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'Bugatti': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+      'Koenigsegg': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'Pagani': 'https://images.unsplash.com/photo-1549399902-5ec3c2c0f56c?w=400&h=300&fit=crop',
+      'Rimac': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'Rivian': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+      'Tesla': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'Lucid': 'https://images.unsplash.com/photo-1549399902-5ec3c2c0f56c?w=400&h=300&fit=crop',
+      'Polestar': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'Volvo': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+      'Saab': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'Opel': 'https://images.unsplash.com/photo-1549399902-5ec3c2c0f56c?w=400&h=300&fit=crop',
+      'Vauxhall': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'Seat': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+      'Skoda': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'Dacia': 'https://images.unsplash.com/photo-1549399902-5ec3c2c0f56c?w=400&h=300&fit=crop',
+      'Lada': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'UAZ': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+      'GAZ': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'ZAZ': 'https://images.unsplash.com/photo-1549399902-5ec3c2c0f56c?w=400&h=300&fit=crop',
+      'Tata': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'Mahindra': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+      'Maruti': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'Bajaj': 'https://images.unsplash.com/photo-1549399902-5ec3c2c0f56c?w=400&h=300&fit=crop',
+      'TVS': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'Hero': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+      'Yamaha': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'Suzuki': 'https://images.unsplash.com/photo-1549399902-5ec3c2c0f56c?w=400&h=300&fit=crop',
+      'Kawasaki': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'Ducati': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+      'KTM': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'Husqvarna': 'https://images.unsplash.com/photo-1549399902-5ec3c2c0f56c?w=400&h=300&fit=crop',
+      'Aprilia': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'Moto Guzzi': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+      'MV Agusta': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'Triumph': 'https://images.unsplash.com/photo-1549399902-5ec3c2c0f56c?w=400&h=300&fit=crop',
+      'Royal Enfield': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'Harley-Davidson': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+      'Indian': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'Victory': 'https://images.unsplash.com/photo-1549399902-5ec3c2c0f56c?w=400&h=300&fit=crop',
+      'Polaris': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'Can-Am': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+      'BRP': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'Arctic Cat': 'https://images.unsplash.com/photo-1549399902-5ec3c2c0f56c?w=400&h=300&fit=crop',
+      'Ski-Doo': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+      'Sea-Doo': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+      'Lynx': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+      'Default': 'https://images.unsplash.com/photo-1549317336-206569e8475c?w=400&h=300&fit=crop'
+    };
+    
+    return defaultImages[marque] || defaultImages[marque?.toLowerCase()] || defaultImages['Default'];
+  }
 
-  const fetchProduits = async () => {
-    try {
-      setLoading(true);
-      // Utiliser l'API backend directe
-      const API_BASE = process.env.REACT_APP_API_BASE_URL || '/api';
-      const response = await fetch(`${API_BASE}/boutique/produits`);
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Erreur lors du chargement des produits');
-      }
-      
-      console.log('Produits reçus de la base:', data);
-      
-      // Nettoyer et améliorer les produits
-      const cleanData = data
-        .filter(produit => produit.nom && produit.nom !== 'adaad') // Filtrer seulement les vrais problèmes
-        .map(produit => {
-          const raw = typeof produit.image === 'string' ? produit.image : '';
-          const trimmed = raw.trim();
-          const cleaned = trimmed.replace(/\s+/g, ''); // supprime espaces/nouvelles lignes
-          const hasDataUrl = cleaned.startsWith('data:image/');
-          const looksLikeBareBase64 = !!cleaned && !cleaned.startsWith('data:') && cleaned.length > 100 && /^[A-Za-z0-9+/=]+$/.test(cleaned.substring(0, 120));
-
-          // Couper si la data URL est tronquée (erreur navigateur) et ignorer
-          const isTruncated = hasDataUrl && !cleaned.endsWith('=') && cleaned.length % 4 !== 0;
-          const normalizedImage = isTruncated
-            ? ''
-            : (hasDataUrl ? cleaned : (looksLikeBareBase64 ? `data:image/png;base64,${cleaned}` : ''));
-
-          console.log(`Produit ${produit.nom}:`, {
-            hasImage: !!cleaned,
-            imageType: cleaned ? cleaned.substring(0, 30) : 'null',
-            normalized: normalizedImage ? normalizedImage.substring(0, 30) : 'none'
-          });
-
-          return {
-            ...produit,
-            image: normalizedImage || generateDefaultImage(produit.categorie, produit.nom)
-          };
-        });
-      
-      console.log('Produits nettoyés:', cleanData);
-      
-      setProduits(cleanData);
-      setError(null);
-    } catch (err) {
-      console.error('Erreur lors du chargement des produits:', err);
-      setError('Erreur lors du chargement des produits');
-    } finally {
-      setLoading(false);
+  // Fonction pour normaliser l'URL de l'image
+  function normalizeImageUrl(url) {
+    if (!url) return generateDefaultImage('Default', 'Product');
+    
+    // Si c'est déjà une URL complète, la retourner telle quelle
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
     }
-  };
-
+    
+    // Si ça commence par /uploads, c'est bon
+    if (url.startsWith('/uploads/')) {
+      return `http://localhost:5000${url}`;
+    }
+    
+    // Si c'est juste un nom de fichier, ajouter le chemin complet
+    if (!url.includes('/')) {
+      return `http://localhost:5000/uploads/images/${url}`;
+    }
+    
+    return url;
+  }
 
   const filteredProduits = useMemo(() => produits.filter(produit => {
     const matchesSearch = 
       produit.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       produit.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategorie = categorieFilter === 'all' || produit.categorie === categorieFilter;
+    const matchesCategorie = categorieFilter === 'all' || produit.marque === categorieFilter;
     return matchesSearch && matchesCategorie;
   }), [produits, searchTerm, categorieFilter]);
 
   // Gérer l'ajout d'un nouveau produit
   const handleAddProduit = () => {
     setSelectedProduit(null);
+    setProductType('voiture');
+    setFormData({
+      nom: '',
+      description: '',
+      prix: '',
+      stock: '',
+      categorie: '',
+      marque: '',
+      reference: '',
+      image: '',
+      // Champs spécifiques voiture
+      modele: '',
+      annee: '',
+      couleur: '',
+      kilometrage: '',
+      carburant: 'essence',
+      transmission: 'manuelle',
+      puissance: '',
+      statut: 'disponible',
+      type_vente: 'vente'
+    });
+    setImagePreview('');
     setShowForm(true);
   };
 
   // Gérer la modification d'un produit
   const handleEditProduit = (produit) => {
     setSelectedProduit(produit);
+    setProductType(produit.type_produit || 'voiture');
+    setFormData({
+      nom: produit.nom || '',
+      description: produit.description || '',
+      prix: produit.prix || '',
+      stock: produit.stock || '',
+      categorie: produit.categorie || '',
+      marque: produit.marque || '',
+      reference: produit.reference || '',
+      image: produit.image || '',
+      // Champs spécifiques voiture
+      modele: produit.modele || '',
+      annee: produit.annee || '',
+      couleur: produit.couleur || '',
+      kilometrage: produit.kilometrage || '',
+      carburant: produit.carburant || '',
+      transmission: produit.transmission || '',
+      puissance: produit.puissance || '',
+      statut: produit.statut || 'disponible',
+      type_vente: produit.type_vente || 'vente'
+    });
+    setImagePreview(produit.image || '');
     setShowForm(true);
+  };
+
+  // Gérer le changement d'URL d'image
+  const handleImageUrlChange = (url) => {
+    if (url) {
+      setImagePreview(url);
+      setFormData(prev => ({ ...prev, image: url }));
+    }
+  };
+
+  // Gérer le changement d'image
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Vérifier le type de fichier
+      if (!file.type.startsWith('image/')) {
+        setSnackbar({ open: true, message: 'Veuillez sélectionner une image', severity: 'error' });
+        return;
+      }
+      
+      // Vérifier la taille (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setSnackbar({ open: true, message: 'L\'image est trop volumineuse (max 10MB)', severity: 'error' });
+        return;
+      }
+
+      try {
+        // Upload de l'image vers le serveur
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        const response = await fetch('http://localhost:5000/api/upload/image', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          const imageUrl = `http://localhost:5000${result.url}`;
+          setImagePreview(imageUrl);
+          setFormData(prev => ({ ...prev, image: imageUrl }));
+          setSnackbar({ open: true, message: 'Image uploadée avec succès', severity: 'success' });
+        } else {
+          throw new Error('Erreur lors de l\'upload');
+        }
+      } catch (error) {
+        console.error('Erreur upload image:', error);
+        setSnackbar({ open: true, message: 'Erreur lors de l\'upload de l\'image', severity: 'error' });
+        
+        // Fallback: conversion en base64
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64String = reader.result;
+          setImagePreview(base64String);
+          setFormData(prev => ({ ...prev, image: base64String }));
+        };
+        reader.readAsDataURL(file);
+      }
+    }
   };
 
   // Gérer la suppression d'un produit
   const handleDeleteProduit = async (id) => {
+    // Confirmation avant suppression
+    const produit = produits.find(p => p.id === id);
+    const confirmMessage = `Êtes-vous sûr de vouloir supprimer "${produit?.nom || 'ce produit'}" ?`;
+    
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
     try {
-      const response = await fetch(`/api/boutique/produits/${id}`, {
+      const response = await fetch(`http://localhost:5000/api/boutique/vehicules/${id}`, {
         method: 'DELETE'
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        if (response.status === 404) {
-          // Le produit n'existe plus, rafraîchir la liste
-          console.warn(`Produit ${id} non trouvé, rafraîchissement de la liste...`);
-          fetchProduits();
-          setSnackbar({ open: true, message: 'Produit déjà supprimé, liste mise à jour', severity: 'warning' });
-          return;
-        }
-        throw new Error(errorData.error || 'Erreur lors de la suppression');
-      }
-      
+
+      if (response.ok) {
+        // Supprimer de la liste locale
       setProduits(produits.filter(produit => produit.id !== id));
       setSnackbar({ open: true, message: 'Produit supprimé avec succès', severity: 'success' });
-    } catch (err) {
-      console.error('Erreur lors de la suppression:', err);
+      } else {
+        const errorData = await response.json();
+        console.error('Erreur suppression:', errorData);
       setSnackbar({ open: true, message: 'Erreur lors de la suppression', severity: 'error' });
+      }
+    } catch (error) {
+      console.error('Erreur suppression:', error);
+      setSnackbar({ open: true, message: 'Erreur de connexion lors de la suppression', severity: 'error' });
     }
   };
 
@@ -195,17 +401,96 @@ const BoutiquePage = () => {
   const handleCloseForm = () => {
     setShowForm(false);
     setSelectedProduit(null);
+    setProductType('voiture');
+    setFormData({
+      nom: '',
+      description: '',
+      prix: '',
+      stock: '',
+      categorie: '',
+      marque: '',
+      reference: '',
+      image: '',
+      // Champs spécifiques voiture
+      modele: '',
+      annee: '',
+      couleur: '',
+      kilometrage: '',
+      carburant: 'essence',
+      transmission: 'manuelle',
+      puissance: '',
+      statut: 'disponible',
+      type_vente: 'vente'
+    });
+    setImagePreview('');
   };
 
-  // Gestion des photos
-  const handleOpenPhotoManager = (produit) => {
-    setSelectedProduitForPhotos(produit);
-    setPhotoManagerOpen(true);
-  };
+  // Gérer la soumission du formulaire
+  const handleSubmitForm = async () => {
+    if (!formData.nom || !formData.prix) {
+      setSnackbar({ open: true, message: 'Veuillez remplir tous les champs obligatoires', severity: 'error' });
+      return;
+    }
 
-  const handleClosePhotoManager = () => {
-    setPhotoManagerOpen(false);
-    setSelectedProduitForPhotos(null);
+    if (productType === 'voiture') {
+      if (!formData.modele || !formData.annee) {
+        setSnackbar({ open: true, message: 'Veuillez remplir le modèle et l\'année pour une voiture', severity: 'error' });
+        return;
+      }
+    }
+
+    try {
+      const productData = {
+        ...formData,
+        type_produit: productType,
+        image: imagePreview || generateDefaultImage(formData.marque, formData.nom)
+      };
+
+      if (selectedProduit) {
+        // Modifier le produit existant
+        const response = await fetch(`http://localhost:5000/api/boutique/vehicules/${selectedProduit.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(productData)
+        });
+
+        if (response.ok) {
+          setSnackbar({ open: true, message: 'Produit modifié avec succès', severity: 'success' });
+          // Rafraîchir la liste des produits
+          fetchProduits();
+        } else {
+          const errorData = await response.json();
+          console.error('Erreur modification:', errorData);
+          setSnackbar({ open: true, message: 'Erreur lors de la modification', severity: 'error' });
+        }
+      } else {
+        // Ajouter un nouveau produit
+        const response = await fetch('http://localhost:5000/api/boutique/vehicules', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(productData)
+        });
+
+        if (response.ok) {
+          setSnackbar({ open: true, message: 'Produit ajouté avec succès', severity: 'success' });
+          // Rafraîchir la liste des produits
+          fetchProduits();
+        } else {
+          const errorData = await response.json();
+          console.error('Erreur ajout:', errorData);
+          setSnackbar({ open: true, message: 'Erreur lors de l\'ajout', severity: 'error' });
+        }
+      }
+
+      handleCloseForm();
+    } catch (error) {
+      console.error('Erreur lors de la soumission:', error);
+      setSnackbar({ open: true, message: 'Erreur de connexion', severity: 'error' });
+    }
   };
 
   const openPreview = (src) => {
@@ -219,401 +504,963 @@ const BoutiquePage = () => {
     setTimeout(() => setPreviewSrc(''), 200);
   };
 
-  // Gérer le succès du formulaire
-  const handleFormSuccess = () => {
-    fetchProduits();
-    setSnackbar({ 
-      open: true, 
-      message: selectedProduit ? 'Produit modifié avec succès' : 'Produit ajouté avec succès', 
-      severity: 'success' 
-    });
-  };
-
-  // Gérer la fermeture du snackbar
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // Fonction d'exportation Excel pour les produits de la boutique
-  const handleExport = () => {
-    try {
-      // Préparer les données pour l'export
-      const exportData = produits.map(produit => ({
-        'ID': produit.id_produit || produit.id,
-        'Nom': produit.nom || 'N/A',
-        'Description': produit.description || 'N/A',
-        'Prix': produit.prix || 'N/A',
-        'Stock': produit.stock || 'N/A',
-        'Catégorie': produit.categorie || 'N/A',
-        'Marque': produit.marque || 'N/A',
-        'Référence': produit.reference || 'N/A',
-        'Statut': produit.statut || 'N/A',
-        'Date de création': produit.date_creation ? new Date(produit.date_creation).toLocaleDateString('fr-FR') : 'N/A'
-      }));
-
-      // Créer un nouveau classeur Excel
-      const wb = XLSX.utils.book_new();
-      
-      // Créer une feuille de calcul avec les données
-      const ws = XLSX.utils.json_to_sheet(exportData);
-      
-      // Définir la largeur des colonnes
-      const colWidths = [
-        { wch: 8 },   // ID
-        { wch: 25 },  // Nom
-        { wch: 40 },  // Description
-        { wch: 12 },  // Prix
-        { wch: 10 },  // Stock
-        { wch: 15 },  // Catégorie
-        { wch: 15 },  // Marque
-        { wch: 15 },  // Référence
-        { wch: 12 },  // Statut
-        { wch: 15 }   // Date de création
-      ];
-      ws['!cols'] = colWidths;
-      
-      // Ajouter la feuille au classeur
-      XLSX.utils.book_append_sheet(wb, ws, 'Produits Boutique');
-      
-      // Générer le fichier Excel
-      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      
-      // Créer et télécharger le fichier
-      const blob = new Blob([excelBuffer], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-      });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `produits_boutique_${new Date().toISOString().split('T')[0]}.xlsx`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // Afficher un message de succès
-      setSnackbar({
-        open: true,
-        message: `Export Excel réussi ! ${produits.length} produits exportés.`,
-        severity: 'success'
-      });
-    } catch (error) {
-      console.error('Erreur lors de l\'export:', error);
-      setSnackbar({
-        open: true,
-        message: 'Erreur lors de l\'export des produits.',
-        severity: 'error'
-      });
-    }
-  };
-
   const getCategorieColor = (categorie) => {
     switch (categorie?.toLowerCase()) {
-      case 'filtres': return 'success';
-      case 'freinage': return 'error';
-      case 'électricité': return 'warning';
-      case 'moteur': return 'primary';
-      case 'suspension': return 'info';
-      case 'carrosserie': return 'secondary';
-      case 'entretien': return 'default';
-      default: return 'default';
+      case 'filtres': return '#10b981';
+      case 'freinage': return '#ef4444';
+      case 'électricité': return '#f59e0b';
+      case 'moteur': return '#8b5cf6';
+      case 'suspension': return '#06b6d4';
+      case 'carrosserie': return '#84cc16';
+      case 'entretien': return '#f97316';
+      default: return '#6b7280';
     }
   };
 
   const getCategorieLabel = (categorie) => {
-    switch (categorie?.toLowerCase()) {
-      case 'filtres': return 'Filtres';
-      case 'freinage': return 'Freinage';
-      case 'électricité': return 'Électricité';
-      case 'moteur': return 'Moteur';
-      case 'suspension': return 'Suspension';
-      case 'carrosserie': return 'Carrosserie';
-      case 'entretien': return 'Entretien';
-      default: return categorie;
-    }
+    const labels = {
+      'filtres': 'Filtres',
+      'freinage': 'Freinage',
+      'électricité': 'Électricité',
+      'moteur': 'Moteur',
+      'suspension': 'Suspension',
+      'carrosserie': 'Carrosserie',
+      'entretien': 'Entretien'
+    };
+    return labels[categorie?.toLowerCase()] || categorie;
   };
 
-  const statCards = [
-    {
-      title: 'Total Produits',
-      value: produits.length,
-      icon: <Store />,
-      color: '#1e40af',
-      gradient: 'linear-gradient(135deg, #1e40af, #3b82f6)',
-      trend: '+6%',
-      trendUp: true
-    },
-    {
-      title: 'En stock',
-      value: produits.filter(p => (p.stock || 0) > 0).length,
-      icon: <ShoppingCart />,
-      color: '#2563eb',
-      gradient: 'linear-gradient(135deg, #2563eb, #60a5fa)',
-      trend: '+3%',
-      trendUp: true
-    },
-    {
-      title: 'Catégories',
-      value: new Set(produits.map(p => (p.categorie || '').toLowerCase())).size,
-      icon: <Star />,
-      color: '#3b82f6',
-      gradient: 'linear-gradient(135deg, #3b82f6, #93c5fd)',
-      trend: '+1%',
-      trendUp: true
-    }
-  ];
-
   return (
-    <ModernPageTemplate
-      title="Boutique du Garage"
-      subtitle="Gestion des produits et stock"
-      icon={Store}
-      statCards={statCards}
-      loading={loading}
-      error={error}
-      onAdd={handleAddProduit}
-      onRefresh={fetchProduits}
-      onExport={handleExport}
-      onFilter={() => {}}
-    >
-      {/* Barre d'outils */}
-      <Paper sx={{ p: 2, mb: 3, background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.2)' }}>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+    <Box sx={{ 
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
+      p: 3
+    }}>
+      {/* En-tête avec animations */}
+      <Box sx={{ mb: 4, textAlign: 'center' }}>
+        <Typography 
+          variant="h3" 
+          sx={{ 
+            fontWeight: 'bold',
+            background: 'linear-gradient(135deg, #10b981, #059669)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            mb: 1,
+            animation: 'pulse 2s ease-in-out infinite',
+            '@keyframes pulse': {
+              '0%, 100%': { opacity: 1 },
+              '50%': { opacity: 0.8 }
+            }
+          }}
+        >
+          <Store sx={{ fontSize: 48, mr: 2, verticalAlign: 'middle', color: '#10b981' }} />
+          Boutique du Garage
+        </Typography>
+        <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          Gestion des produits et stock
+        </Typography>
+      </Box>
+
+      {/* Cartes de statistiques animées */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ 
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            color: 'white',
+            position: 'relative',
+            overflow: 'hidden',
+            '&:hover': {
+              transform: 'translateY(-8px)',
+              boxShadow: '0 12px 40px rgba(16, 185, 129, 0.4)'
+            },
+            transition: 'all 0.3s ease'
+          }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box>
+                  <Typography variant="h4" fontWeight="bold">{produits.length}</Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>Total Produits</Typography>
+                </Box>
+                <Badge 
+                  badgeContent={<TrendingUp />} 
+                  sx={{ 
+                    '& .MuiBadge-badge': { 
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      animation: 'bounce 1s ease-in-out infinite',
+                      '@keyframes bounce': {
+                        '0%, 100%': { transform: 'translateY(0)' },
+                        '50%': { transform: 'translateY(-10px)' }
+                      }
+                    }
+                  }}
+                >
+                  <Store sx={{ fontSize: 48, opacity: 0.3 }} />
+                </Badge>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Card sx={{ 
+            background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+            color: 'white',
+            '&:hover': {
+              transform: 'translateY(-8px)',
+              boxShadow: '0 12px 40px rgba(5, 150, 105, 0.4)'
+            },
+            transition: 'all 0.3s ease'
+          }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box>
+                  <Typography variant="h4" fontWeight="bold">
+                    {produits.filter(p => p.stock > 0).length}
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>En Stock</Typography>
+                </Box>
+                <Inventory sx={{ fontSize: 48, opacity: 0.3 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Card sx={{ 
+            background: 'linear-gradient(135deg, #047857 0%, #065f46 100%)',
+            color: 'white',
+            '&:hover': {
+              transform: 'translateY(-8px)',
+              boxShadow: '0 12px 40px rgba(4, 120, 87, 0.4)'
+            },
+            transition: 'all 0.3s ease'
+          }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box>
+                  <Typography variant="h4" fontWeight="bold">
+                    {new Set(produits.map(p => p.categorie)).size}
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>Catégories</Typography>
+                </Box>
+                <Star sx={{ fontSize: 48, opacity: 0.3 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Barre de recherche et filtres */}
+      <Paper sx={{ 
+        p: 3, 
+        mb: 3, 
+        background: 'rgba(16, 185, 129, 0.1)', 
+        backdropFilter: 'blur(20px)', 
+        border: '1px solid rgba(16, 185, 129, 0.3)',
+        boxShadow: '0 8px 32px rgba(16, 185, 129, 0.2)'
+      }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={4}>
           <TextField
+              fullWidth
             placeholder="Rechercher un produit..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             InputProps={{
-              startAdornment: <Search sx={{ mr: 1, color: 'rgba(255,255,255,0.8)' }} />
-            }}
-            sx={{ minWidth: 250 }}
-          />
+                startAdornment: <Search sx={{ mr: 1, color: '#10b981' }} />
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'rgba(255,255,255,0.05)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255,255,255,0.1)'
+                  }
+                }
+              }}
+            />
+          </Grid>
           
-          <FormControl sx={{ minWidth: 150 }}>
-            <InputLabel>Filtrer par catégorie</InputLabel>
+          <Grid item xs={12} md={3}>
+            <FormControl fullWidth>
+              <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Marque</InputLabel>
             <Select
               value={categorieFilter}
               onChange={(e) => setCategorieFilter(e.target.value)}
-              label="Filtrer par catégorie"
-            >
-              <MenuItem value="all">Toutes les catégories</MenuItem>
-              <MenuItem value="filtres">Filtres</MenuItem>
-              <MenuItem value="freinage">Freinage</MenuItem>
-              <MenuItem value="électricité">Électricité</MenuItem>
-              <MenuItem value="moteur">Moteur</MenuItem>
-              <MenuItem value="suspension">Suspension</MenuItem>
-              <MenuItem value="carrosserie">Carrosserie</MenuItem>
-              <MenuItem value="entretien">Entretien</MenuItem>
+                label="Marque"
+                sx={{
+                  backgroundColor: 'rgba(255,255,255,0.05)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255,255,255,0.1)'
+                  }
+                }}
+              >
+                <MenuItem value="all">Toutes les marques</MenuItem>
+                <MenuItem value="Toyota">Toyota</MenuItem>
+                <MenuItem value="BMW">BMW</MenuItem>
+                <MenuItem value="Mercedes">Mercedes</MenuItem>
+                <MenuItem value="Audi">Audi</MenuItem>
             </Select>
           </FormControl>
+          </Grid>
 
+          <Grid item xs={12} md={5} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
           <Button
             variant="contained"
             startIcon={<Add />}
             onClick={handleAddProduit}
-            sx={{ background: 'linear-gradient(135deg, #1e40af, #2563eb)' }}
+              sx={{ 
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                px: 4,
+                py: 1.5,
+                fontSize: '1rem',
+                fontWeight: 'bold',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #059669, #047857)',
+                  transform: 'scale(1.05)',
+                  boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)'
+                },
+                transition: 'all 0.3s ease'
+              }}
           >
             Nouveau Produit
           </Button>
-        </Box>
+          </Grid>
+        </Grid>
       </Paper>
 
-      {/* Affichage en grille */}
+      {/* Grille de produits */}
       <Grid container spacing={3}>
-        {filteredProduits.map((produit, index) => (
-          <Grid item xs={12} sm={6} md={4} lg={3} key={produit.id || `produit-${index}`}>
-            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)' }}>
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                  {/* Afficher l'image */}
+        {filteredProduits.map((produit) => (
+          <Grid item xs={12} sm={6} md={4} lg={3} key={produit.id}>
+            <Card sx={{ 
+              height: '100%',
+              background: 'rgba(255,255,255,0.05)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(16, 185, 129, 0.2)',
+              position: 'relative',
+              overflow: 'hidden',
+              '&:hover': {
+                transform: 'translateY(-10px) scale(1.02)',
+                boxShadow: '0 16px 48px rgba(16, 185, 129, 0.3)',
+                border: '1px solid rgba(16, 185, 129, 0.5)'
+              },
+              transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: '-100%',
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.2), transparent)',
+                transition: 'left 0.5s ease'
+              },
+              '&:hover::before': {
+                left: '100%'
+              }
+            }}>
+              <CardContent sx={{ pb: 1 }}>
+                {/* Image avec effet */}
+                <Box sx={{ 
+                  position: 'relative',
+                  mb: 2,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  height: 180
+                }}>
                   <img
-                    src={produit.image}
+                    src={normalizeImageUrl(produit.image)}
                     alt={produit.nom}
+                    onError={(e) => {
+                      console.error('Erreur de chargement image:', produit.nom, 'Image src:', produit.image);
+                      e.target.src = generateDefaultImage(produit.marque || produit.categorie, produit.nom);
+                    }}
                     style={{
-                      width: '60px',
-                      height: '60px',
-                      objectFit: 'cover',
-                      borderRadius: '8px',
-                      border: '2px solid rgba(16,185,129,0.3)',
-                      cursor: 'zoom-in'
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      objectFit: 'contain',
+                      borderRadius: '12px',
+                      cursor: 'zoom-in',
+                      transition: 'transform 0.3s ease',
+                      filter: 'drop-shadow(0 4px 12px rgba(16, 185, 129, 0.3))'
                     }}
                     onClick={() => openPreview(produit.image)}
-                    onError={(e) => {
-                      console.error('Erreur de chargement image:', produit.nom, 'Image src:', produit.image.substring(0, 50));
-                      // En cas d'erreur, générer une image de fallback
-                      e.target.src = generateDefaultImage(produit.categorie, produit.nom);
-                    }}
-                    onLoad={() => {
-                      console.log('Image chargée avec succès:', produit.nom, 'Image src:', produit.image.substring(0, 50));
-                    }}
+                    onMouseEnter={(e) => e.target.style.transform = 'scale(1.1)'}
+                    onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
                   />
+                  
+                  {/* Badge catégorie animé */}
                   <Chip 
                     label={getCategorieLabel(produit.categorie)}
-                    color={getCategorieColor(produit.categorie)}
                     size="small"
+                    sx={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      backgroundColor: getCategorieColor(produit.categorie),
+                      color: 'white',
+                      fontWeight: 'bold',
+                      animation: 'float 3s ease-in-out infinite',
+                      '@keyframes float': {
+                        '0%, 100%': { transform: 'translateY(0)' },
+                        '50%': { transform: 'translateY(-5px)' }
+                      }
+                    }}
                   />
                 </Box>
                 
-                <Typography variant="h6" component="h2" gutterBottom>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    color: 'white',
+                    fontWeight: 'bold',
+                    mb: 1,
+                    minHeight: 48
+                  }}
+                >
                   {produit.nom}
                 </Typography>
                 
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: 'rgba(255,255,255,0.7)',
+                    mb: 2,
+                    minHeight: 40
+                  }}
+                >
                   {produit.description}
                 </Typography>
                 
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Typography 
-                    variant="h6" 
-                    color={produit.prix ? "primary" : "text.primary"} 
-                    fontWeight="bold"
+                    variant="h5" 
                     sx={{ 
-                      color: !produit.prix && isAdmin ? '#000000' : undefined,
+                      color: '#10b981',
                       fontWeight: 'bold'
                     }}
                   >
-                    {produit.prix ? `${parseFloat(produit.prix).toFixed(2)} €` : 'Prix non défini'}
+                    {parseFloat(produit.prix).toFixed(2)} €
                   </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Star sx={{ fontSize: 16, color: 'gold', mr: 0.5 }} />
-                    <Typography variant="body2">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Star sx={{ fontSize: 16, color: '#fbbf24' }} />
+                    <Typography variant="body2" sx={{ color: 'white' }}>
                       {produit.note}
                     </Typography>
                   </Box>
                 </Box>
+
+                <Chip
+                  label={`Stock: ${produit.stock}`}
+                  size="small"
+                  sx={{
+                    mt: 1,
+                    backgroundColor: produit.stock > 20 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                    color: produit.stock > 20 ? '#10b981' : '#ef4444',
+                    border: `1px solid ${produit.stock > 20 ? '#10b981' : '#ef4444'}`
+                  }}
+                />
               </CardContent>
               
-              <CardActions sx={{ justifyContent: 'space-between', p: 2, gap: 2 }}>
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <CardActions sx={{ p: 2, pt: 0 }}>
+                <Box sx={{ display: 'flex', gap: 1, width: '100%', justifyContent: 'center' }}>
                   <IconButton
                     size="small"
+                    onClick={() => openPreview(produit.image)}
                     sx={{
-                      backgroundColor: '#ff9800',
-                      color: 'white',
+                      backgroundColor: 'rgba(251, 191, 36, 0.2)',
+                      color: '#fbbf24',
+                      border: '1px solid #fbbf24',
                       '&:hover': {
-                        backgroundColor: '#f57c00',
-                        transform: 'scale(1.1)',
-                        boxShadow: '0 4px 12px rgba(255, 152, 0, 0.4)'
+                        backgroundColor: '#fbbf24',
+                        color: 'white',
+                        transform: 'scale(1.15) rotate(5deg)',
+                        boxShadow: '0 4px 12px rgba(251, 191, 36, 0.5)'
                       },
-                      transition: 'all 0.2s ease'
+                      transition: 'all 0.3s ease'
                     }}
                   >
                     <Visibility />
                   </IconButton>
+                  
                   <IconButton
                     size="small"
                     onClick={() => handleEditProduit(produit)}
                     sx={{
-                      backgroundColor: '#4caf50',
-                      color: 'white',
+                      backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                      color: '#10b981',
+                      border: '1px solid #10b981',
                       '&:hover': {
-                        backgroundColor: '#388e3c',
-                        transform: 'scale(1.1)',
-                        boxShadow: '0 4px 12px rgba(76, 175, 80, 0.4)'
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        transform: 'scale(1.15) rotate(-5deg)',
+                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.5)'
                       },
-                      transition: 'all 0.2s ease'
+                      transition: 'all 0.3s ease'
                     }}
                   >
                     <Edit />
                   </IconButton>
+                  
                   <IconButton 
                     size="small" 
-                    color="error"
                     onClick={() => handleDeleteProduit(produit.id)}
                     sx={{ 
-                      mr: 1,
+                      backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                      color: '#ef4444',
+                      border: '1px solid #ef4444',
                       '&:hover': {
-                        transform: 'scale(1.1)',
-                        boxShadow: '0 4px 12px rgba(244, 67, 54, 0.4)'
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        transform: 'scale(1.15) rotate(5deg)',
+                        boxShadow: '0 4px 12px rgba(239, 68, 68, 0.5)'
                       },
-                      transition: 'all 0.2s ease'
+                      transition: 'all 0.3s ease'
                     }}
                   >
                     <Delete />
                   </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleOpenPhotoManager(produit)}
-                    sx={{
-                      backgroundColor: '#9c27b0',
-                      color: 'white',
-                      '&:hover': {
-                        backgroundColor: '#7b1fa2',
-                        transform: 'scale(1.1)',
-                        boxShadow: '0 4px 12px rgba(156, 39, 176, 0.4)'
-                      },
-                      transition: 'all 0.2s ease'
-                    }}
-                    title="Gérer les photos"
-                  >
-                    <PhotoCamera />
-                  </IconButton>
                 </Box>
-                {!isAdmin && (
-                  <Button 
-                    size="small" 
-                    variant="contained" 
-                    startIcon={<ShoppingCart />}
-                    sx={{ backgroundColor: '#2e7d32' }}
-                  >
-                    Ajouter
-                  </Button>
-                )}
               </CardActions>
             </Card>
           </Grid>
         ))}
       </Grid>
 
-      <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="body2" color="textSecondary">
-          {filteredProduits.length} produit(s) trouvé(s)
+      {/* Formulaire de produit */}
+      <Dialog 
+        open={showForm} 
+        onClose={handleCloseForm}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+            boxShadow: '0 16px 48px rgba(0, 0, 0, 0.5)'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+                      color: 'white',
+          fontSize: '1.5rem',
+          fontWeight: 'bold',
+          borderBottom: '1px solid rgba(16, 185, 129, 0.3)'
+        }}>
+          {selectedProduit ? 'Modifier le produit' : 'Nouveau produit'}
+        </DialogTitle>
+        
+        <DialogContent sx={{ pt: 3 }}>
+          <Grid container spacing={3}>
+            {/* Sélection du type de produit */}
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Type de produit</InputLabel>
+                <Select
+                  value={productType}
+                  onChange={(e) => setProductType(e.target.value)}
+                  label="Type de produit"
+                  sx={{
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                      '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.1)'
+                    }
+                  }}
+                >
+                  <MenuItem value="voiture">🚗 Voiture</MenuItem>
+                  <MenuItem value="piece">🔧 Pièce détachée</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Aperçu de l'image */}
+            <Grid item xs={12} sx={{ textAlign: 'center' }}>
+              <Box sx={{ 
+                width: 200,
+                height: 200,
+                margin: '0 auto',
+                mb: 2,
+                border: '2px dashed rgba(16, 185, 129, 0.5)',
+                borderRadius: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                position: 'relative',
+                backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                '&:hover': {
+                  borderColor: '#10b981',
+                  backgroundColor: 'rgba(16, 185, 129, 0.1)'
+                },
+                transition: 'all 0.3s ease'
+              }}>
+                {imagePreview ? (
+                  <img 
+                    src={imagePreview} 
+                    alt="Aperçu" 
+                    style={{ 
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      objectFit: 'contain'
+                    }} 
+                  />
+                ) : (
+                  <ImageIcon sx={{ fontSize: 80, color: 'rgba(16, 185, 129, 0.3)' }} />
+                )}
+                </Box>
+              
+                  <Button 
+                    variant="contained" 
+                component="label"
+                startIcon={<CloudUpload />}
+                sx={{
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  mb: 2,
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #059669, #047857)'
+                  }
+                }}
+              >
+                Choisir une image
+                <input
+                  type="file"
+                  hidden
+                  accept="image/*"
+                  onChange={handleImageChange}
+                />
+                  </Button>
+          </Grid>
+
+            {/* Champ pour URL d'image en ligne */}
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Ou entrez une URL d'image en ligne"
+                value={formData.image}
+                onChange={(e) => handleImageUrlChange(e.target.value)}
+                placeholder="https://example.com/image.jpg"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.1)'
+                    }
+                  }
+                }}
+              />
+      </Grid>
+
+            {/* Aperçu de l'image */}
+            {imagePreview && (
+              <Grid item xs={12}>
+                <Box sx={{ textAlign: 'center', mt: 2 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, color: 'rgba(255,255,255,0.7)' }}>
+                    Aperçu de l'image :
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Chip 
-            label={`Total: ${produits.length}`}
-            color="default"
-            size="small"
+                  <img
+                    src={imagePreview}
+                    alt="Aperçu"
+                    style={{
+                      maxWidth: '200px',
+                      maxHeight: '150px',
+                      objectFit: 'contain',
+                      borderRadius: '8px',
+                      border: '2px solid rgba(16, 185, 129, 0.3)'
+                    }}
+                    onError={(e) => {
+                      console.error('Erreur de chargement aperçu:', imagePreview);
+                      e.target.style.display = 'none';
+                    }}
           />
         </Box>
-      </Box>
+              </Grid>
+            )}
 
-      {/* Formulaire de produit */}
-      <ProduitForm
-        open={showForm}
-        onClose={handleCloseForm}
-        onSuccess={handleFormSuccess}
-        produit={selectedProduit}
-      />
+            {/* Champs communs */}
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Nom du produit"
+                value={formData.nom}
+                onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.1)'
+                    }
+                  }
+                }}
+              />
+            </Grid>
 
-      {/* Gestionnaire de photos */}
-      <PhotoManager
-        open={photoManagerOpen}
-        onClose={handleClosePhotoManager}
-        produitId={selectedProduitForPhotos?.id}
-        produitNom={selectedProduitForPhotos?.nom}
-      />
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Marque"
+                value={formData.marque}
+                onChange={(e) => setFormData({ ...formData, marque: e.target.value })}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.1)'
+                    }
+                  }
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                multiline
+                rows={3}
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.1)'
+                    }
+                  }
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="Prix (€)"
+                type="number"
+                value={formData.prix}
+                onChange={(e) => setFormData({ ...formData, prix: e.target.value })}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.1)'
+                    }
+                  }
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="Stock"
+                type="number"
+                value={formData.stock}
+                onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.1)'
+                    }
+                  }
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth>
+                <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                  {productType === 'voiture' ? 'Type de vente' : 'Catégorie'}
+                </InputLabel>
+                <Select
+                  value={productType === 'voiture' ? (formData.type_vente || 'vente') : (formData.categorie || '')}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    [productType === 'voiture' ? 'type_vente' : 'categorie']: e.target.value 
+                  })}
+                  label={productType === 'voiture' ? 'Type de vente' : 'Catégorie'}
+                  sx={{
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.1)'
+                    }
+                  }}
+                >
+                  {productType === 'voiture' ? (
+                    <>
+                      <MenuItem value="vente">Vente</MenuItem>
+                      <MenuItem value="location">Location</MenuItem>
+                    </>
+                  ) : (
+                    <>
+                      <MenuItem value="filtres">Filtres</MenuItem>
+                      <MenuItem value="freinage">Freinage</MenuItem>
+                      <MenuItem value="électricité">Électricité</MenuItem>
+                      <MenuItem value="moteur">Moteur</MenuItem>
+                      <MenuItem value="suspension">Suspension</MenuItem>
+                      <MenuItem value="carrosserie">Carrosserie</MenuItem>
+                      <MenuItem value="entretien">Entretien</MenuItem>
+                    </>
+                  )}
+                </Select>
+              </FormControl>
+          </Grid>
+
+            {/* Champs spécifiques aux voitures */}
+            {productType === 'voiture' && (
+              <>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Modèle *"
+                    value={formData.modele}
+                    onChange={(e) => setFormData({ ...formData, modele: e.target.value })}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(255,255,255,0.1)'
+                        }
+                      }
+                    }}
+                  />
+      </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Année *"
+                    type="number"
+                    value={formData.annee}
+                    onChange={(e) => setFormData({ ...formData, annee: e.target.value })}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(255,255,255,0.1)'
+                        }
+                      }
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Couleur"
+                    value={formData.couleur}
+                    onChange={(e) => setFormData({ ...formData, couleur: e.target.value })}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(255,255,255,0.1)'
+                        }
+                      }
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Kilométrage"
+                    type="number"
+                    value={formData.kilometrage}
+                    onChange={(e) => setFormData({ ...formData, kilometrage: e.target.value })}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(255,255,255,0.1)'
+                        }
+                      }
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={4}>
+                  <FormControl fullWidth>
+                    <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Carburant</InputLabel>
+                    <Select
+                      value={formData.carburant || 'essence'}
+                      onChange={(e) => setFormData({ ...formData, carburant: e.target.value })}
+                      label="Carburant"
+                      sx={{
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(255,255,255,0.1)'
+                        }
+                      }}
+                    >
+                      <MenuItem value="essence">Essence</MenuItem>
+                      <MenuItem value="diesel">Diesel</MenuItem>
+                      <MenuItem value="hybride">Hybride</MenuItem>
+                      <MenuItem value="electrique">Électrique</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} md={4}>
+                  <FormControl fullWidth>
+                    <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Transmission</InputLabel>
+                    <Select
+                      value={formData.transmission || 'manuelle'}
+                      onChange={(e) => setFormData({ ...formData, transmission: e.target.value })}
+                      label="Transmission"
+                      sx={{
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(255,255,255,0.1)'
+                        }
+                      }}
+                    >
+                      <MenuItem value="manuelle">Manuelle</MenuItem>
+                      <MenuItem value="automatique">Automatique</MenuItem>
+                      <MenuItem value="semi-automatique">Semi-automatique</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    fullWidth
+                    label="Puissance (CV)"
+                    type="number"
+                    value={formData.puissance}
+                    onChange={(e) => setFormData({ ...formData, puissance: e.target.value })}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(255,255,255,0.1)'
+                        }
+                      }
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth>
+                    <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Statut</InputLabel>
+                    <Select
+                      value={formData.statut || 'disponible'}
+                      onChange={(e) => setFormData({ ...formData, statut: e.target.value })}
+                      label="Statut"
+                      sx={{
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(255,255,255,0.1)'
+                        }
+                      }}
+                    >
+                      <MenuItem value="disponible">Disponible</MenuItem>
+                      <MenuItem value="vendu">Vendu</MenuItem>
+                      <MenuItem value="en_location">En location</MenuItem>
+                      <MenuItem value="maintenance">En maintenance</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </>
+            )}
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Référence"
+                value={formData.reference}
+                onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.1)'
+                    }
+                  }
+                }}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        
+        <DialogActions sx={{ p: 3, borderTop: '1px solid rgba(16, 185, 129, 0.3)' }}>
+          <Button 
+            onClick={handleCloseForm}
+            sx={{ color: 'rgba(255,255,255,0.7)' }}
+          >
+            Annuler
+          </Button>
+          <Button
+            onClick={handleSubmitForm}
+            variant="contained"
+            sx={{
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #059669, #047857)'
+              }
+            }}
+          >
+            {selectedProduit ? 'Modifier' : 'Ajouter'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Prévisualisation d'image */}
+      <Dialog
+        open={previewOpen}
+        onClose={closePreview}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            background: 'rgba(0, 0, 0, 0.9)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(16, 185, 129, 0.3)'
+          }
+        }}
+      >
+        <DialogContent sx={{ p: 0, textAlign: 'center' }}>
+          <img
+            src={previewSrc}
+            alt="Prévisualisation"
+            style={{
+              maxWidth: '100%',
+              maxHeight: '80vh',
+              objectFit: 'contain',
+              cursor: isZoomed ? 'zoom-out' : 'zoom-in'
+            }}
+            onClick={() => setIsZoomed(!isZoomed)}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Snackbar pour les notifications */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={6000}
+        autoHideDuration={4000}
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity}
+          sx={{ 
+            background: snackbar.severity === 'success' 
+              ? 'linear-gradient(135deg, #10b981, #059669)' 
+              : 'linear-gradient(135deg, #ef4444, #dc2626)',
+            color: 'white',
+            fontWeight: 'bold'
+          }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
-      {previewOpen && (
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2000,padding:20}} onClick={closePreview}>
-          <div style={{position:'relative',maxWidth:'90vw',maxHeight:'90vh'}} onClick={(e)=>e.stopPropagation()}>
-            <img src={previewSrc} alt="Aperçu produit" style={{maxWidth:'90vw',maxHeight:'90vh',objectFit:'contain',transition:'transform 0.2s ease', transform: isZoomed ? 'scale(1.8)' : 'scale(1)'}} onClick={()=>setIsZoomed(!isZoomed)} />
-            <button onClick={closePreview} style={{position:'absolute',top:-10,right:-10,background:'rgba(255,255,255,0.15)',color:'#fff',border:'1px solid rgba(255,255,255,0.3)',padding:'6px 10px',borderRadius:20,cursor:'pointer',backdropFilter:'blur(6px)'}}>✕</button>
-          </div>
-        </div>
-      )}
-    </ModernPageTemplate>
+    </Box>
   );
 };
 

@@ -6,8 +6,9 @@ export const getProductImage = (produit) => {
     return `${SERVER_BASE}${produit.image}`;
   }
   
-  // Images par défaut selon la catégorie
+  // Images par défaut selon la catégorie ou marque
   const defaultImages = {
+    // Pièces auto
     'filtres': '/images/filtres-default.jpg',
     'freinage': '/images/freinage-default.jpg',
     'moteur': '/images/moteur-default.jpg',
@@ -15,11 +16,26 @@ export const getProductImage = (produit) => {
     'carrosserie': '/images/carrosserie-default.jpg',
     'entretien': '/images/entretien-default.jpg',
     'électricité': '/images/electrique-default.jpg',
-    'accessoires': '/images/accessoires-default.jpg'
+    'accessoires': '/images/accessoires-default.jpg',
+    
+    // Marques de véhicules
+    'Toyota': 'https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=400&h=300&fit=crop',
+    'BMW': 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&h=300&fit=crop',
+    'Mercedes': 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=400&h=300&fit=crop',
+    'Audi': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+    'Peugeot': 'https://images.unsplash.com/photo-1549317336-206569e8475c?w=400&h=300&fit=crop',
+    'Renault': 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop',
+    'Volkswagen': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop',
+    'Ford': 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=300&fit=crop',
+    'Nissan': 'https://images.unsplash.com/photo-1549317336-206569e8475c?w=400&h=300&fit=crop',
+    'Honda': 'https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=400&h=300&fit=crop',
+    'Hyundai': 'https://images.unsplash.com/photo-1549317336-206569e8475c?w=400&h=300&fit=crop',
+    'Kia': 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400&h=300&fit=crop'
   };
   
-  const categorie = produit.categorie?.toLowerCase();
-  return defaultImages[categorie] || '/images/produit-default.jpg';
+  // Utiliser la marque pour les véhicules, sinon la catégorie
+  const key = produit.marque || produit.categorie?.toLowerCase();
+  return defaultImages[key] || '/images/produit-default.jpg';
 };
 
 // Images de démonstration avec des URLs d'images gratuites

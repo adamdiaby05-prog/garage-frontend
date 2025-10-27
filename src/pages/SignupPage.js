@@ -152,11 +152,21 @@ const SignupPage = () => {
     setLoading(true);
 
     try {
-      await authAPI.register(form);
+      // Préparer les données pour l'API
+      const apiData = {
+        nom: form.nom,
+        prenom: form.prenom,
+        email: form.email,
+        mot_de_passe: form.password, // Convertir password en mot_de_passe
+        telephone: form.telephone || '',
+        type_compte: form.role
+      };
+      
+      await authAPI.register(apiData);
 
       // Auto-login après inscription et redirection selon type_compte/role
       try {
-        const { data } = await authAPI.login({ email: form.email, password: form.password });
+        const { data } = await authAPI.login({ email: form.email, mot_de_passe: form.password });
         const rawUser = data.user || {};
         const backendRole = ((rawUser.role || '') + '').toLowerCase();
         const normalizedRole =

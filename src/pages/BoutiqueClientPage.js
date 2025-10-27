@@ -21,7 +21,29 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Tabs,
+  Tab,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  Checkbox,
+  FormGroup,
+  Divider,
+  Paper,
+  Avatar,
+  Badge,
+  Tooltip,
+  Slider,
+  Switch,
+  FormLabel
 } from '@mui/material';
 import { 
   ShoppingCart, 
@@ -37,217 +59,84 @@ import {
   Close,
   FilterList,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  LocalShipping,
+  AttachMoney,
+  CalendarToday,
+  Palette,
+  Build,
+  Eco,
+  Security,
+  Wifi,
+  MusicNote,
+  PhoneAndroid,
+  Directions,
+  Favorite,
+  Share,
+  Compare,
+  Info,
+  CheckCircle,
+  Warning,
+  Error,
+  ArrowBack,
+  Home
 } from '@mui/icons-material';
-import { boutiqueAPI } from '../services/api';
+import { vehiculesAPI, couleursAPI, filtresAPI, prixAPI } from '../services/vehiculesAPI';
 
 const BoutiqueClientPage = () => {
   const navigate = useNavigate();
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [particles, setParticles] = useState([]);
-  const [hoveredCard, setHoveredCard] = useState(null);
-  const [scrollY, setScrollY] = useState(0);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [sortBy, setSortBy] = useState('name');
-  const [cart, setCart] = useState([]);
+  const [activeTab, setActiveTab] = useState(0);
+  const [vehicules, setVehicules] = useState([]);
+  const [pieces, setPieces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewSrc, setPreviewSrc] = useState('');
-  const [isZoomed, setIsZoomed] = useState(false);
-  const [orderOpen, setOrderOpen] = useState(false);
-  const [orderProduct, setOrderProduct] = useState(null);
-  const [orderForm, setOrderForm] = useState({ nom: '', email: '', telephone: '', adresse: '' });
-  const [orderQty, setOrderQty] = useState(1);
-  const [orderSubmitting, setOrderSubmitting] = useState(false);
-
-  // Données de démonstration (fallback si API vide)
-  const demoProducts = [
-    { 
-      id: 1, 
-      nom: "Filtre à huile premium", 
-      description: "Filtre haute performance pour moteur avec technologie nano-filtration", 
-      prix: 29.99, 
-      stock: 15, 
-      categorie: "filtres", 
-      reference: "FIL001", 
-      note: 4.8, 
-      nombreAvis: 42,
-      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
-      badge: "Premium"
-    },
-    { 
-      id: 2, 
-      nom: "Plaquettes de frein", 
-      description: "Plaquettes céramique longue durée avec système anti-bruit", 
-      prix: 89.99, 
-      stock: 8, 
-      categorie: "freinage", 
-      reference: "FREIN001", 
-      note: 4.6, 
-      nombreAvis: 38,
-      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
-      badge: "Sport"
-    },
-    { 
-      id: 3, 
-      nom: "Ampoule LED H7", 
-      description: "Éclairage LED blanc pur 6000K avec durée de vie 50 000h", 
-      prix: 45.99, 
-      stock: 25, 
-      categorie: "électricité", 
-      reference: "LED001", 
-      note: 4.9, 
-      nombreAvis: 67,
-      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
-      badge: "LED"
-    },
-    { 
-      id: 4, 
-      nom: "Joint de culasse", 
-      description: "Joint haute résistance thermique pour moteurs haute performance", 
-      prix: 199.99, 
-      stock: 5, 
-      categorie: "moteur", 
-      reference: "MOT001", 
-      note: 4.7, 
-      nombreAvis: 23,
-      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
-      badge: "Pro"
-    },
-    { 
-      id: 5, 
-      nom: "Amortisseur avant", 
-      description: "Amortisseur hydraulique sport avec réglage de dureté", 
-      prix: 159.99, 
-      stock: 12, 
-      categorie: "suspension", 
-      reference: "SUSP001", 
-      note: 4.5, 
-      nombreAvis: 31,
-      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
-      badge: "Sport"
-    },
-    { 
-      id: 6, 
-      nom: "Rétroviseur droit", 
-      description: "Rétroviseur électrique dégivrant avec indicateur de direction", 
-      prix: 125.99, 
-      stock: 7, 
-      categorie: "carrosserie", 
-      reference: "CAR001", 
-      note: 4.3, 
-      nombreAvis: 19,
-      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
-      badge: "Smart"
-    },
-    { 
-      id: 7, 
-      nom: "Huile moteur 5W30", 
-      description: "Huile synthétique haute performance pour tous types de moteurs", 
-      prix: 35.99, 
-      stock: 30, 
-      categorie: "entretien", 
-      reference: "ENT001", 
-      note: 4.8, 
-      nombreAvis: 89,
-      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
-      badge: "Synthétique"
-    },
-    { 
-      id: 8, 
-      nom: "Filtre à air sport", 
-      description: "Filtre haute filtration réutilisable avec gain de puissance", 
-      prix: 79.99, 
-      stock: 18, 
-      categorie: "filtres", 
-      reference: "FIL002", 
-      note: 4.6, 
-      nombreAvis: 44,
-      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
-      badge: "Performance"
-    }
-  ];
-
-  const categories = [
-    { value: 'all', label: 'Tous les produits', icon: <DirectionsCar /> },
-    { value: 'filtres', label: 'Filtres', icon: <FilterList /> },
-    { value: 'freinage', label: 'Freinage', icon: <Shield /> },
-    { value: 'électricité', label: 'Électricité', icon: <Bolt /> },
-    { value: 'moteur', label: 'Moteur', icon: <AutoAwesome /> },
-    { value: 'suspension', label: 'Suspension', icon: <Speed /> },
-    { value: 'carrosserie', label: 'Carrosserie', icon: <Verified /> },
-    { value: 'entretien', label: 'Entretien', icon: <Star /> }
-  ];
-
-  const [products, setProducts] = useState([]);
-
-  // Charger les produits depuis l'API boutique (identique à BoutiquePage)
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedVehicule, setSelectedVehicule] = useState(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  
+  // Debug pour le dialog
   useEffect(() => {
-    const fetchProduits = async () => {
-      try {
-        setLoading(true);
-        setError('');
-        const API_BASE = process.env.REACT_APP_API_BASE_URL || '/api';
-        const response = await fetch(`${API_BASE}/boutique/produits`);
-          const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error || 'Erreur lors du chargement des produits');
-        }
-        const cleanData = (Array.isArray(data) ? data : [])
-          .filter(produit => produit.nom && produit.nom !== 'adaad')
-          .map((produit, idx) => {
-              const raw = typeof produit.image === 'string' ? produit.image : '';
-              const trimmed = raw.trim();
-              const cleaned = trimmed.replace(/\s+/g, '');
-              const hasDataUrl = cleaned.startsWith('data:image/');
-              const looksLikeBareBase64 = !!cleaned && !cleaned.startsWith('data:') && cleaned.length > 100 && /^[A-Za-z0-9+/=]+$/.test(cleaned.substring(0, 120));
-              const isTruncated = hasDataUrl && !cleaned.endsWith('=') && cleaned.length % 4 !== 0;
-            const normalizedImage = isTruncated ? '' : (hasDataUrl ? cleaned : (looksLikeBareBase64 ? `data:image/png;base64,${cleaned}` : ''));
-              return {
-                ...produit,
-              id: produit.id ?? (produit.id_produit ?? idx + 1),
-              image: normalizedImage || getDefaultImage(produit.categorie, produit.nom)
-              };
-            });
-        setProducts(cleanData.length > 0 ? cleanData : demoProducts);
-      } catch (e) {
-        console.error('Erreur chargement produits boutique-client:', e);
-        setError('Erreur lors du chargement des produits');
-        setProducts(demoProducts);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProduits();
-  }, []);
+    console.log('Dialog state changed:', dialogOpen);
+  }, [dialogOpen]);
+  const [selectedCouleur, setSelectedCouleur] = useState('');
+  const [typeAchat, setTypeAchat] = useState('achat');
+  const [dureeLocation, setDureeLocation] = useState(1);
+  const [filters, setFilters] = useState({
+    marque: '',
+    prixMin: 0,
+    prixMax: 100000000,
+    anneeMin: 2015,
+    anneeMax: 2024,
+    carburant: '',
+    transmission: ''
+  });
+  const [showFilters, setShowFilters] = useState(false);
+  const [cart, setCart] = useState([]);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [contactForm, setContactForm] = useState({
+    nom: '',
+    prenom: '',
+    email: '',
+    telephone: '',
+    localisation: '',
+    adresse: '',
+    ville: '',
+    codePostal: '',
+    message: ''
+  });
+  const [formErrors, setFormErrors] = useState({});
+  
+  // États pour les effets visuels
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [particles, setParticles] = useState([]);
+  const [scrollY, setScrollY] = useState(0);
+  const [hoveredCard, setHoveredCard] = useState(null);
 
-  const getDefaultImage = (categorie, nom) => {
-    const colors = {
-      'filtres': '#10b981',
-      'freinage': '#ef4444',
-      'électricité': '#f59e0b',
-      'moteur': '#8b5cf6',
-      'suspension': '#06b6d4',
-      'carrosserie': '#84cc16',
-      'entretien': '#f97316',
-      'test': '#6b7280'
-    };
-    const color = colors[(categorie || '').toLowerCase()] || '#6b7280';
-    const initial = (categorie || nom || 'P').charAt(0).toUpperCase();
-    const svg = `<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg"><rect width="60" height="60" fill="${color}" rx="8"/><text x="30" y="35" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="white">${initial}</text></svg>`;
-    return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
-  };
+  // Utiliser les services API
+  const couleursDisponibles = couleursAPI.getCouleursDisponibles();
+  const marquesPopulaires = filtresAPI.getMarquesPopulaires();
 
-  // Badges 3D avec animations
-  const badges3D = [
-    { icon: <Verified />, title: 'Garantie', subtitle: '2 ans', color: '#00ff88', glow: 'rgba(0, 255, 136, 0.5)', rotation: '12deg' },
-    { icon: <Speed />, title: 'Livraison', subtitle: '24h', color: '#00ff88', glow: 'rgba(0, 255, 136, 0.5)', rotation: '-8deg' },
-    { icon: <Shield />, title: 'Sécurisé', subtitle: 'SSL', color: '#00ff88', glow: 'rgba(0, 255, 136, 0.5)', rotation: '15deg' }
-  ];
 
   // Initialisation des particules
   useEffect(() => {
@@ -264,145 +153,835 @@ const BoutiqueClientPage = () => {
     setParticles(initialParticles);
 
     const animateParticles = () => {
-      setParticles(prev => prev.map(p => {
-        const nextX = p.x + p.speedX;
-        const nextY = p.y + p.speedY;
-        return {
+      setParticles(prev => prev.map(p => ({
           ...p,
-          x: nextX > window.innerWidth ? 0 : nextX < 0 ? window.innerWidth : nextX,
-          y: nextY > window.innerHeight ? 0 : nextY < 0 ? window.innerHeight : nextY
-        };
-      }));
+        x: (p.x + p.speedX) > window.innerWidth ? 0 : (p.x + p.speedX) < 0 ? window.innerWidth : p.x + p.speedX,
+        y: (p.y + p.speedY) > window.innerHeight ? 0 : (p.y + p.speedY) < 0 ? window.innerHeight : p.y + p.speedY
+      })));
     };
 
     const interval = setInterval(animateParticles, 50);
     return () => clearInterval(interval);
   }, []);
 
-  // Mouse tracking
+  // Gestion du scroll et de la souris
   useEffect(() => {
-    const handleMouseMove = (e) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-    };
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
+    const handleScroll = () => setScrollY(window.scrollY);
+    const handleMouseMove = (e) => setMousePosition({ x: e.clientX, y: e.clientY });
+    
     window.addEventListener('scroll', handleScroll);
+    window.addEventListener('mousemove', handleMouseMove);
+    
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('mousemove', handleMouseMove);
     };
   }, []);
 
-  // Filtrer et trier les produits
-  const filteredProducts = (Array.isArray(products) ? products : []).filter(product => {
-    const name = (product?.nom ?? '').toString();
-    const description = (product?.description ?? '').toString();
-    const category = (product?.categorie ?? '').toString();
-    const q = (searchTerm ?? '').toString().toLowerCase();
-    const matchesSearch = name.toLowerCase().includes(q) || description.toLowerCase().includes(q);
-    const matchesCategory = selectedCategory === 'all' || category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  }).sort((a, b) => {
-    const aName = (a?.nom ?? '').toString();
-    const bName = (b?.nom ?? '').toString();
-    const aPrice = Number(a?.prix ?? 0);
-    const bPrice = Number(b?.prix ?? 0);
-    const aRating = Number(a?.note ?? 0);
-    const bRating = Number(b?.note ?? 0);
-    switch (sortBy) {
-      case 'price-asc': return aPrice - bPrice;
-      case 'price-desc': return bPrice - aPrice;
-      case 'rating': return bRating - aRating;
-      default: return aName.localeCompare(bName);
+  useEffect(() => {
+    fetchVehicules();
+    fetchPieces();
+  }, []);
+
+  // Debug des changements d'état
+  useEffect(() => {
+    console.log('=== État dialogOpen changé ===');
+    console.log('dialogOpen:', dialogOpen);
+    console.log('selectedVehicule:', selectedVehicule);
+  }, [dialogOpen, selectedVehicule]);
+
+  const fetchVehicules = async () => {
+    try {
+      setLoading(true);
+      console.log('Chargement des véhicules...');
+      
+      // Récupérer les véhicules en vente depuis l'API
+      const response = await fetch('http://localhost:5000/api/vente/vehicules');
+      if (response.ok) {
+        const vehiculesEnVente = await response.json();
+        console.log('Véhicules en vente récupérés:', vehiculesEnVente);
+        
+        // Transformer les données pour correspondre au format attendu
+        const vehicules = vehiculesEnVente.map(v => ({
+          id: v.id,
+          marque: v.marque,
+          modele: v.modele,
+          annee: v.annee,
+          prix_vente: parseFloat(v.prix_vente),
+          prix_location_jour: parseFloat(v.prix_vente) * 0.01, // 1% du prix de vente par jour
+          kilometrage: v.kilometrage || 0,
+          puissance: v.puissance || '',
+          carburant: v.carburant || 'Essence',
+          transmission: v.transmission || 'Manuelle',
+          couleur: v.couleur || '',
+          statut: 'disponible',
+          description: v.description || `${v.marque} ${v.modele} ${v.annee} - ${v.couleur}`,
+          caracteristiques: ['Climatisation', 'GPS', 'Bluetooth'],
+          consommation: '6.5L/100km',
+          garantie: '3 ans',
+          image: v.image_principale || '',
+          vendeur: `${v.client_prenom} ${v.client_nom}`,
+          type_vente: 'vente'
+        }));
+        
+        setVehicules(vehicules);
+        return;
+      }
+      
+      // Fallback: Données de test en dur pour s'assurer que ça fonctionne
+      const testVehicules = [
+        {
+          id: 1,
+          marque: 'Toyota',
+          modele: 'Corolla',
+          annee: 2023,
+          prix_vente: 25000000,
+          prix_location_jour: 150000,
+          kilometrage: 25000,
+          puissance: '180 CV',
+          carburant: 'Essence',
+          transmission: 'Automatique',
+          couleur: 'Blanc',
+          statut: 'disponible',
+          description: 'Véhicule familial confortable et économique',
+          caracteristiques: ['Climatisation', 'GPS', 'Bluetooth', 'Caméra de recul', 'Airbags', 'ABS', 'Direction assistée'],
+          consommation: '6.5L/100km',
+          garantie: '3 ans'
+        },
+        {
+          id: 2,
+          marque: 'BMW',
+          modele: 'X3',
+          annee: 2023,
+          prix_vente: 45000000,
+          prix_location_jour: 250000,
+          kilometrage: 15000,
+          puissance: '250 CV',
+          carburant: 'Essence',
+          transmission: 'Automatique',
+          couleur: 'Noir',
+          statut: 'disponible',
+          description: 'SUV premium avec toutes les options',
+          caracteristiques: ['Climatisation', 'GPS', 'Bluetooth', 'Caméra de recul', 'Airbags', 'ABS', 'Direction assistée'],
+          consommation: '8.2L/100km',
+          garantie: '3 ans'
+        }
+      ];
+      
+      console.log('Utilisation des données de test:', testVehicules);
+      setVehicules(testVehicules);
+      
+      // Essayer aussi l'API
+      try {
+        const data = await vehiculesAPI.getAll();
+        console.log('Véhicules reçus de l\'API:', data);
+        
+        if (data && data.length > 0) {
+          const vehiculesAvecCaracteristiques = data.map(vehicule => ({
+            ...vehicule,
+            statut: vehicule.statut || 'disponible',
+            caracteristiques: vehicule.caracteristiques || [
+              'Climatisation',
+              'GPS',
+              'Bluetooth',
+              'Caméra de recul',
+              'Airbags',
+              'ABS',
+              'Direction assistée'
+            ],
+            consommation: vehicule.consommation || 'Consommation non spécifiée',
+            garantie: vehicule.garantie || 'Garantie constructeur'
+          }));
+          
+          console.log('Véhicules avec caractéristiques:', vehiculesAvecCaracteristiques);
+          setVehicules(vehiculesAvecCaracteristiques);
+        }
+      } catch (apiErr) {
+        console.log('API non disponible, utilisation des données de test');
+      }
+      
+    } catch (err) {
+      console.error('Erreur lors du chargement des véhicules:', err);
+      setError('Erreur lors du chargement des véhicules');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const fetchPieces = async () => {
+    try {
+      // Simulation de données pour les pièces
+      const mockPieces = [
+        {
+          id: 1,
+          nom: 'Pneus Michelin',
+          prix: 150000,
+          categorie: 'Pneus',
+          stock: 50,
+          description: 'Pneus haute performance'
+        }
+      ];
+      setPieces(mockPieces);
+    } catch (err) {
+      console.error('Erreur chargement pièces:', err);
+    }
+  };
+
+  const handleVehiculeClick = (vehicule) => {
+    console.log('=== handleVehiculeClick appelé ===');
+    console.log('Véhicule cliqué:', vehicule);
+    console.log('État avant:', { dialogOpen, selectedVehicule });
+    
+    setSelectedVehicule(vehicule);
+    setSelectedCouleur(vehicule.couleur || 'Blanc');
+    setDialogOpen(true);
+    
+    console.log('États mis à jour - dialogOpen devrait être true');
+    
+    // Vérification après un délai
+    setTimeout(() => {
+      console.log('État après timeout:', { dialogOpen, selectedVehicule });
+    }, 100);
+  };
+
+  const handleAchat = () => {
+    if (!selectedVehicule) return;
+    
+    // Afficher le formulaire de contact au lieu d'ajouter directement au panier
+    setShowContactForm(true);
+  };
+
+  const handleContactFormSubmit = (e) => {
+    e.preventDefault();
+    
+    // Validation du formulaire
+    const errors = {};
+    if (!contactForm.nom.trim()) errors.nom = 'Le nom est obligatoire';
+    if (!contactForm.prenom.trim()) errors.prenom = 'Le prénom est obligatoire';
+    if (!contactForm.email.trim()) errors.email = 'L\'email est obligatoire';
+    if (!contactForm.telephone.trim()) errors.telephone = 'Le numéro de téléphone est obligatoire';
+    if (!contactForm.localisation.trim()) errors.localisation = 'La localisation est obligatoire';
+    
+    // Validation email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (contactForm.email && !emailRegex.test(contactForm.email)) {
+      errors.email = 'Format d\'email invalide';
+    }
+    
+    // Validation téléphone
+    const phoneRegex = /^[+]?[0-9\s\-\(\)]{8,}$/;
+    if (contactForm.telephone && !phoneRegex.test(contactForm.telephone)) {
+      errors.telephone = 'Format de téléphone invalide';
+    }
+    
+    setFormErrors(errors);
+    
+    if (Object.keys(errors).length > 0) {
+      setSnackbar({
+        open: true,
+        message: 'Veuillez corriger les erreurs du formulaire',
+        severity: 'error'
+      });
+      return;
+    }
+    
+    // Si validation OK, ajouter au panier
+    const prixFinal = prixAPI.calculerPrixTotal(selectedVehicule, selectedCouleur, typeAchat, dureeLocation);
+
+    const commande = {
+      id: Date.now(),
+      vehicule: selectedVehicule,
+      couleur: selectedCouleur,
+      type: typeAchat,
+      prix: prixFinal,
+      duree: typeAchat === 'location' ? dureeLocation : null,
+      date: new Date().toISOString(),
+      client: {
+        nom: contactForm.nom,
+        prenom: contactForm.prenom,
+        email: contactForm.email,
+        telephone: contactForm.telephone,
+        localisation: contactForm.localisation,
+        adresse: contactForm.adresse,
+        ville: contactForm.ville,
+        codePostal: contactForm.codePostal,
+        message: contactForm.message
+      }
+    };
+
+    setCart(prev => [...prev, commande]);
+    setSnackbar({
+      open: true,
+      message: `${typeAchat === 'achat' ? 'Achat' : 'Location'} ajouté au panier avec succès !`,
+      severity: 'success'
+    });
+    
+    // Fermer les dialogs et réinitialiser le formulaire
+    setDialogOpen(false);
+    setShowContactForm(false);
+    setContactForm({
+      nom: '',
+      prenom: '',
+      email: '',
+      telephone: '',
+      localisation: '',
+      adresse: '',
+      ville: '',
+      codePostal: '',
+      message: ''
+    });
+    setFormErrors({});
+  };
+
+  const handleContactFormChange = (field, value) => {
+    setContactForm(prev => ({ ...prev, [field]: value }));
+    // Supprimer l'erreur du champ modifié
+    if (formErrors[field]) {
+      setFormErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  const filteredVehicules = vehicules.filter(vehicule => {
+    const matchesSearch = vehicule.marque.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         vehicule.modele.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesMarque = !filters.marque || vehicule.marque === filters.marque;
+    const matchesPrix = vehicule.prix_vente >= filters.prixMin && vehicule.prix_vente <= filters.prixMax;
+    const matchesAnnee = vehicule.annee >= filters.anneeMin && vehicule.annee <= filters.anneeMax;
+    const matchesCarburant = !filters.carburant || vehicule.carburant === filters.carburant;
+    const matchesTransmission = !filters.transmission || vehicule.transmission === filters.transmission;
+
+    return matchesSearch && matchesMarque && matchesPrix && matchesAnnee && matchesCarburant && matchesTransmission;
   });
 
-  const openOrderModal = (product) => {
-    setOrderProduct(product);
-    setOrderQty(1);
-    setOrderForm({ nom: '', email: '', telephone: '', adresse: '' });
-    setOrderOpen(true);
-  };
+  const VehiculeCard = ({ vehicule }) => (
+    <Card 
+      className={`vehicule-card ${hoveredCard === vehicule.id ? 'hovered' : ''}`}
+      onMouseEnter={() => setHoveredCard(vehicule.id)}
+      onMouseLeave={() => setHoveredCard(null)}
+    >
+      <div className="card-image-container">
+        <div
+          className="card-image"
+          style={{
+            background: `linear-gradient(135deg, ${couleursDisponibles.find(c => c.nom === vehicule.couleur)?.code || '#f0f0f0'} 0%, rgba(0,0,0,0.1) 100%)`
+          }}
+        >
+          <DirectionsCar className="car-icon" />
+        </div>
+        <Chip 
+          label={vehicule.statut === 'disponible' ? 'Disponible' : 'Indisponible'}
+          className={`status-chip ${vehicule.statut === 'disponible' ? 'available' : 'unavailable'}`}
+        />
+        <IconButton
+          className="favorite-btn"
+          onClick={() => setSnackbar({ open: true, message: 'Ajouté aux favoris !', severity: 'info' })}
+        >
+          <Favorite />
+        </IconButton>
+      </div>
 
-  const addToCart = (product) => {
-    openOrderModal(product);
-  };
+      <CardContent className="card-content">
+        <Typography variant="h6" className="vehicle-title">
+          {vehicule.marque} {vehicule.modele}
+        </Typography>
+        
+        <div className="vehicle-specs">
+          <Typography variant="body2" className="spec-text">
+            {vehicule.annee}
+          </Typography>
+          <Chip label={vehicule.carburant} size="small" className="spec-chip" />
+          <Chip label={vehicule.transmission} size="small" className="spec-chip" />
+        </div>
 
-  const submitOrder = async () => {
-    try {
-      setOrderSubmitting(true);
-      // Tentative de géolocalisation
-      const getPosition = () => new Promise((resolve) => {
-        if (!navigator.geolocation) return resolve(null);
-        navigator.geolocation.getCurrentPosition(
-          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-          () => resolve(null),
-          { enableHighAccuracy: true, timeout: 5000 }
-        );
-      });
-      const position = (await getPosition()) || { lat: null, lng: null };
-      const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
-      const payload = {
-        produit: {
-          id: orderProduct.id,
-          nom: orderProduct.nom,
-          reference: orderProduct.reference,
-          prix: orderProduct.prix,
-          image: orderProduct.image,
-        },
-        quantite: Number(orderQty) || 1,
-        client: { ...orderForm },
-        position: { lat: position.lat, lng: position.lng },
-      };
-      const res = await fetch(`${API_BASE}/commandes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Erreur lors de l\'envoi de la commande');
-      }
-      setSnackbar({ open: true, message: 'Commande envoyée avec succès ✅', severity: 'success' });
-      setOrderOpen(false);
-    } catch (e) {
-      console.error(e);
-      setSnackbar({ open: true, message: e.message || 'Erreur de commande', severity: 'error' });
-    } finally {
-      setOrderSubmitting(false);
+        <Typography variant="body2" className="vehicle-details">
+          {vehicule.kilometrage.toLocaleString()} km • {vehicule.puissance}
+        </Typography>
+
+        <div className="vehicle-features">
+          <div className="feature-item">
+            <Speed className="feature-icon" />
+            <Typography variant="body2">
+              {vehicule.consommation || 'Consommation non spécifiée'}
+            </Typography>
+          </div>
+          <div className="feature-item">
+            <Shield className="feature-icon" />
+            <Typography variant="body2">
+              Garantie {vehicule.garantie || 'Non spécifiée'}
+            </Typography>
+          </div>
+        </div>
+
+        <Typography variant="body2" className="vehicle-description">
+          {vehicule.description}
+        </Typography>
+
+        <div className="price-section">
+          <Typography variant="h6" className="price">
+            {vehicule.prix_vente.toLocaleString()} FCFA
+          </Typography>
+          <Typography variant="body2" className="rental-price">
+            Location: {vehicule.prix_location_jour.toLocaleString()} FCFA/jour
+          </Typography>
+        </div>
+
+        <div className="features-tags">
+          {vehicule.caracteristiques.slice(0, 3).map((carac, index) => (
+            <Chip key={index} label={carac} size="small" className="feature-tag" />
+          ))}
+          {vehicule.caracteristiques.length > 3 && (
+            <Chip label={`+${vehicule.caracteristiques.length - 3}`} size="small" className="more-features" />
+          )}
+        </div>
+      </CardContent>
+
+      <CardActions className="card-actions">
+        <Button
+          fullWidth
+          className="action-button"
+          startIcon={<DirectionsCar />}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Redirection vers options du véhicule:', vehicule.id);
+            navigate(`/vehicule-options/${vehicule.id}`);
+          }}
+          disabled={false}
+        >
+          Voir options
+        </Button>
+      </CardActions>
+    </Card>
+  );
+
+  const ContactFormDialog = () => (
+    <Dialog 
+      open={showContactForm} 
+      onClose={() => setShowContactForm(false)}
+      maxWidth="md"
+      fullWidth
+      className="contact-form-dialog"
+      TransitionProps={{ timeout: 0 }}
+      BackdropProps={{ style: { animation: 'none', transition: 'none' } }}
+    >
+      <DialogTitle className="dialog-title">
+        <div className="dialog-header">
+          <Typography variant="h5">
+            Informations de Contact
+          </Typography>
+          <IconButton onClick={() => setShowContactForm(false)} className="close-btn">
+            <Close />
+          </IconButton>
+        </div>
+      </DialogTitle>
+
+      <DialogContent className="dialog-content">
+        <form onSubmit={handleContactFormSubmit} className="contact-form">
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Nom *"
+                value={contactForm.nom}
+                onChange={(e) => handleContactFormChange('nom', e.target.value)}
+                error={!!formErrors.nom}
+                helperText={formErrors.nom}
+                className="form-field"
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Prénom *"
+                value={contactForm.prenom}
+                onChange={(e) => handleContactFormChange('prenom', e.target.value)}
+                error={!!formErrors.prenom}
+                helperText={formErrors.prenom}
+                className="form-field"
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Email *"
+                type="email"
+                value={contactForm.email}
+                onChange={(e) => handleContactFormChange('email', e.target.value)}
+                error={!!formErrors.email}
+                helperText={formErrors.email}
+                className="form-field"
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Téléphone *"
+                value={contactForm.telephone}
+                onChange={(e) => handleContactFormChange('telephone', e.target.value)}
+                error={!!formErrors.telephone}
+                helperText={formErrors.telephone}
+                className="form-field"
+                placeholder="+225 XX XX XX XX"
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Localisation *"
+                value={contactForm.localisation}
+                onChange={(e) => handleContactFormChange('localisation', e.target.value)}
+                error={!!formErrors.localisation}
+                helperText={formErrors.localisation}
+                className="form-field"
+                placeholder="Ex: Abidjan, Cocody"
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Adresse complète"
+                value={contactForm.adresse}
+                onChange={(e) => handleContactFormChange('adresse', e.target.value)}
+                className="form-field"
+                multiline
+                rows={2}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Ville"
+                value={contactForm.ville}
+                onChange={(e) => handleContactFormChange('ville', e.target.value)}
+                className="form-field"
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Code Postal"
+                value={contactForm.codePostal}
+                onChange={(e) => handleContactFormChange('codePostal', e.target.value)}
+                className="form-field"
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Message (optionnel)"
+                value={contactForm.message}
+                onChange={(e) => handleContactFormChange('message', e.target.value)}
+                className="form-field"
+                multiline
+                rows={3}
+                placeholder="Dites-nous en plus sur vos besoins..."
+              />
+            </Grid>
+          </Grid>
+        </form>
+      </DialogContent>
+
+      <DialogActions className="dialog-actions">
+        <Button 
+          onClick={() => setShowContactForm(false)} 
+          className="cancel-btn"
+        >
+          Annuler
+        </Button>
+        <Button 
+          variant="contained" 
+          onClick={handleContactFormSubmit}
+          startIcon={<ShoppingCart />}
+          className="submit-btn"
+        >
+          Confirmer et Ajouter au Panier
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+
+  const VehiculeDialog = () => {
+    console.log('=== VehiculeDialog rendu ===');
+    console.log('dialogOpen:', dialogOpen);
+    console.log('selectedVehicule:', selectedVehicule);
+    console.log('Type de dialogOpen:', typeof dialogOpen);
+    
+    if (!dialogOpen) {
+      console.log('Dialog fermé, pas de rendu');
+      return null;
     }
+    
+    console.log('Dialog ouvert, rendu du contenu');
+    return (
+      <Dialog 
+        open={true} 
+        onClose={() => setDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+        className="vehicle-dialog"
+        disableEscapeKeyDown={false}
+        disableBackdropClick={false}
+        TransitionProps={{
+          timeout: 0
+        }}
+        BackdropProps={{
+          style: {
+            animation: 'none',
+            transition: 'none',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)'
+          }
+        }}
+      >
+      <DialogTitle className="dialog-title">
+        <div className="dialog-header">
+          <Typography variant="h5">
+            {selectedVehicule?.marque} {selectedVehicule?.modele}
+          </Typography>
+          <IconButton onClick={() => setDialogOpen(false)} className="close-btn">
+            <Close />
+          </IconButton>
+        </div>
+      </DialogTitle>
+
+      <DialogContent className="dialog-content">
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <div className="vehicle-preview">
+              <div
+                className="preview-image"
+                style={{
+                  background: `linear-gradient(135deg, ${couleursDisponibles.find(c => c.nom === selectedCouleur)?.code || '#f0f0f0'} 0%, rgba(0,0,0,0.1) 100%)`
+                }}
+              >
+                <DirectionsCar className="preview-car-icon" />
+              </div>
+            </div>
+
+            <Typography variant="h6" className="features-title">
+              Caractéristiques
+            </Typography>
+            <Grid container spacing={1}>
+              {selectedVehicule?.caracteristiques.map((carac, index) => (
+                <Grid item xs={6} key={index}>
+                  <div className="feature-item-dialog">
+                    <CheckCircle className="check-icon" />
+                    <Typography variant="body2">{carac}</Typography>
+                  </div>
+                </Grid>
+              ))}
+            </Grid>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <FormControl component="fieldset" className="purchase-type">
+              <FormLabel component="legend">Type d'achat</FormLabel>
+              <RadioGroup
+                value={typeAchat}
+                onChange={(e) => setTypeAchat(e.target.value)}
+              >
+                <FormControlLabel 
+                  value="achat" 
+                  control={<Radio />} 
+                  label={`Achat - ${selectedVehicule?.prix_vente.toLocaleString()} FCFA`} 
+                />
+                <FormControlLabel 
+                  value="location" 
+                  control={<Radio />} 
+                  label={`Location - ${selectedVehicule?.prix_location_jour.toLocaleString()} FCFA/jour`} 
+                />
+              </RadioGroup>
+            </FormControl>
+
+            {typeAchat === 'location' && (
+              <FormControl fullWidth className="duration-select">
+                <InputLabel>Durée de location</InputLabel>
+                <Select
+                  value={dureeLocation}
+                  onChange={(e) => setDureeLocation(e.target.value)}
+                >
+                  <MenuItem value={1}>1 jour</MenuItem>
+                  <MenuItem value={7}>1 semaine</MenuItem>
+                  <MenuItem value={30}>1 mois</MenuItem>
+                  <MenuItem value={90}>3 mois</MenuItem>
+                  <MenuItem value={365}>1 an</MenuItem>
+                </Select>
+              </FormControl>
+            )}
+
+            <FormControl fullWidth className="color-selector">
+              <FormLabel>Couleur</FormLabel>
+              <Grid container spacing={1}>
+                {couleursDisponibles.map((couleur) => (
+                  <Grid item xs={3} key={couleur.nom}>
+                    <div
+                      className={`color-option ${selectedCouleur === couleur.nom ? 'selected' : ''}`}
+                      style={{ backgroundColor: couleur.code }}
+                      onClick={() => setSelectedCouleur(couleur.nom)}
+                    >
+                      <Typography variant="caption" className="color-name">
+                        {couleur.nom}
+                      </Typography>
+                      {couleur.prix > 0 && (
+                        <Typography variant="caption" className="color-price">
+                          +{couleur.prix.toLocaleString()} FCFA
+                        </Typography>
+                      )}
+                    </div>
+                  </Grid>
+                ))}
+              </Grid>
+            </FormControl>
+
+            <Paper className="order-summary">
+              <Typography variant="h6" className="summary-title">
+                Résumé de la commande
+              </Typography>
+              <div className="summary-line">
+                <Typography>Prix de base:</Typography>
+                <Typography>
+                  {typeAchat === 'achat' 
+                    ? selectedVehicule?.prix_vente.toLocaleString() 
+                    : (selectedVehicule?.prix_location_jour * dureeLocation).toLocaleString()
+                  } FCFA
+                </Typography>
+              </div>
+              {couleursDisponibles.find(c => c.nom === selectedCouleur)?.prix > 0 && (
+                <div className="summary-line">
+                  <Typography>Supplément couleur:</Typography>
+                  <Typography>
+                    +{couleursDisponibles.find(c => c.nom === selectedCouleur)?.prix.toLocaleString()} FCFA
+                  </Typography>
+                </div>
+              )}
+              <Divider className="summary-divider" />
+              <div className="summary-total">
+                <Typography variant="h6" className="total-label">
+                  Total:
+                </Typography>
+                <Typography variant="h6" className="total-price">
+                  {(
+                    (typeAchat === 'achat' ? selectedVehicule?.prix_vente : selectedVehicule?.prix_location_jour * dureeLocation) +
+                    (couleursDisponibles.find(c => c.nom === selectedCouleur)?.prix || 0)
+                  ).toLocaleString()} FCFA
+                </Typography>
+              </div>
+            </Paper>
+          </Grid>
+        </Grid>
+      </DialogContent>
+
+      <DialogActions className="dialog-actions">
+        <Button onClick={() => setDialogOpen(false)} className="cancel-btn">
+          Annuler
+        </Button>
+        <Button 
+          variant="contained" 
+          onClick={handleAchat}
+          startIcon={<ShoppingCart />}
+          className="add-to-cart-btn"
+        >
+          Ajouter au panier
+        </Button>
+      </DialogActions>
+    </Dialog>
+    );
   };
 
-  const openPreview = (src) => {
-    setPreviewSrc(src);
-    setIsZoomed(false);
-    setPreviewOpen(true);
-  };
+  const FiltersPanel = () => (
+    <Paper className="filters-panel">
+      <Typography variant="h6" className="filters-title">
+        Filtres
+      </Typography>
+      
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={6} md={3}>
+          <FormControl fullWidth>
+            <InputLabel>Marque</InputLabel>
+            <Select
+              value={filters.marque}
+              onChange={(e) => setFilters(prev => ({ ...prev, marque: e.target.value }))}
+            >
+              <MenuItem value="">Toutes</MenuItem>
+              {marquesPopulaires.map(marque => (
+                <MenuItem key={marque} value={marque}>{marque}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
 
-  const closePreview = () => {
-    setPreviewOpen(false);
-    setTimeout(() => setPreviewSrc(''), 200);
-  };
+        <Grid item xs={12} sm={6} md={3}>
+          <FormControl fullWidth>
+            <InputLabel>Carburant</InputLabel>
+            <Select
+              value={filters.carburant}
+              onChange={(e) => setFilters(prev => ({ ...prev, carburant: e.target.value }))}
+            >
+              <MenuItem value="">Tous</MenuItem>
+              <MenuItem value="Essence">Essence</MenuItem>
+              <MenuItem value="Diesel">Diesel</MenuItem>
+              <MenuItem value="Hybride">Hybride</MenuItem>
+              <MenuItem value="Électrique">Électrique</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
 
-  const getBadgeColor = (badge) => {
-    const colors = {
-      'Premium': '#00ff88',
-      'Sport': '#ff6b6b',
-      'LED': '#4ecdc4',
-      'Pro': '#45b7d1',
-      'Smart': '#96ceb4',
-      'Synthétique': '#feca57',
-      'Performance': '#ff9ff3'
-    };
-    return colors[badge] || '#00ff88';
-  };
+        <Grid item xs={12} sm={6} md={3}>
+          <FormControl fullWidth>
+            <InputLabel>Transmission</InputLabel>
+            <Select
+              value={filters.transmission}
+              onChange={(e) => setFilters(prev => ({ ...prev, transmission: e.target.value }))}
+            >
+              <MenuItem value="">Toutes</MenuItem>
+              <MenuItem value="Manuelle">Manuelle</MenuItem>
+              <MenuItem value="Automatique">Automatique</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Typography className="price-label">Prix (FCFA)</Typography>
+          <Slider
+            value={[filters.prixMin, filters.prixMax]}
+            onChange={(e, newValue) => setFilters(prev => ({ 
+              ...prev, 
+              prixMin: newValue[0], 
+              prixMax: newValue[1] 
+            }))}
+            min={0}
+            max={100000000}
+            step={1000000}
+            valueLabelDisplay="auto"
+            valueLabelFormat={(value) => `${(value / 1000000).toFixed(0)}M`}
+            className="price-slider"
+          />
+        </Grid>
+      </Grid>
+    </Paper>
+  );
+
+  if (loading) {
+  return (
+    <div className="boutique-container">
+        <div className="loading-container">
+          <CircularProgress className="loading-spinner" />
+          <Typography className="loading-text">Chargement des véhicules...</Typography>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="boutique-container">
-      {/* Particules flottantes */}
+      {/* Particules d'arrière-plan */}
       {particles.map(particle => (
         <div 
           key={particle.id} 
@@ -413,29 +992,28 @@ const BoutiqueClientPage = () => {
             width: particle.size, 
             height: particle.size, 
             backgroundColor: particle.color, 
-            opacity: particle.opacity, 
-            boxShadow: `0 0 ${particle.size * 4}px ${particle.color}` 
+            opacity: particle.opacity
           }} 
         />
       ))}
 
-      {/* Effet de cursor glow */}
+      {/* Effet de curseur */}
       <div 
         className="cursor-glow" 
         style={{ 
           left: mousePosition.x - 150, 
-          top: mousePosition.y - 150, 
+          top: mousePosition.y - 150
         }} 
       />
 
-      {/* Header avec animation */}
+      {/* Header avec navigation */}
       <header className={`header ${scrollY > 50 ? 'scrolled' : ''}`}>
         <div className="container">
           <div className="header-content">
             <div className="logo-section" onClick={() => navigate('/')}>
               <div className="logo-icon">
                 <div className="logo-inner">
-                  <ShoppingCart className="logo-car" />
+                  <DirectionsCar className="logo-car" />
                 </div>
               </div>
               <div className="logo-text">
@@ -444,29 +1022,24 @@ const BoutiqueClientPage = () => {
               </div>
             </div>
             
-            <nav className="desktop-nav">
-              {['Accueil', 'Services', 'À propos', 'Contact'].map(item => (
-                <button key={item} className="nav-link" onClick={() => console.log(`Navigate to ${item}`)}>{item}</button>
-              ))}
-            </nav>
-            
-            <button 
-              className="mobile-menu-btn" 
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <Close /> : <MenuIcon />}
-            </button>
+            <div className="header-actions">
+              <Button 
+                className="back-btn"
+                startIcon={<ArrowBack />}
+                onClick={() => navigate('/')}
+              >
+                Retour
+              </Button>
+              <Button 
+                className="home-btn"
+                startIcon={<Home />}
+                onClick={() => navigate('/')}
+              >
+                Accueil
+              </Button>
           </div>
         </div>
-
-        {/* Menu mobile */}
-        {isMenuOpen && (
-          <div className="mobile-menu">
-            {['Accueil', 'Services', 'À propos', 'Contact'].map(item => (
-              <button key={item} className="mobile-nav-link" onClick={() => console.log(`Navigate to ${item}`)}>{item}</button>
-            ))}
           </div>
-        )}
       </header>
 
       {/* Section principale */}
@@ -475,298 +1048,224 @@ const BoutiqueClientPage = () => {
           {/* Hero section */}
           <div className="hero-section">
             <div className="hero-content">
-              {/* Badges 3D flottants */}
-              <div className="badges-container">
-                {badges3D.map((badge, index) => (
-                  <div 
-                    key={index}
-                    className="badge-3d"
-                    style={{
-                      transform: `rotate(${badge.rotation}) translateY(${Math.sin(Date.now() / 1000 + index) * 10}px)`,
-                      boxShadow: `0 20px 40px ${badge.glow}, inset 0 0 20px rgba(255,255,255,0.1)`
-                    }}
-                  >
-                    <div className="badge-icon" style={{ color: badge.color }}>
-                      {badge.icon}
+              <div className="welcome-badge animate-badge">
+                <Star className="star-icon rotating" />
+                <span>Boutique Automobile Premium</span>
+                <div className="badge-glow"></div>
                     </div>
-                    <div className="badge-text">
-                      <div className="badge-title">{badge.title}</div>
-                      <div className="badge-subtitle">{badge.subtitle}</div>
+              
+              <Typography variant="h2" className="hero-title">
+                <span className="title-line slide-in-1">Véhicules d'exception</span>
+                <span className="title-line neon slide-in-2">à votre portée</span>
+              </Typography>
+              
+              <Typography className="hero-description fade-in">
+                Découvrez notre collection de 
+                <span className="highlight pulse"> véhicules premium </span> 
+                avec options de 
+                <span className="highlight pulse"> vente et location</span>.
+              </Typography>
+
+              {/* Stats animés */}
+              <div className="stats-row fade-in-up">
+                <div className="stat-item">
+                  <div className="stat-number counting">150+</div>
+                  <div className="stat-label">Véhicules</div>
                     </div>
-                    <div className="badge-glow" style={{ background: badge.glow }} />
+                <div className="stat-divider"></div>
+                <div className="stat-item">
+                  <div className="stat-number counting">98%</div>
+                  <div className="stat-label">Satisfaction</div>
                   </div>
-                ))}
+                <div className="stat-divider"></div>
+                <div className="stat-item">
+                  <div className="stat-number counting">24/7</div>
+                  <div className="stat-label">Support</div>
+                </div>
               </div>
 
-              <div className="hero-text">
-                <div className="welcome-badge">
-                  <Star className="star-icon" />
-                  <span>Boutique Premium AutoSoft</span>
+              {/* Badges animés */}
+              <div className="badges-container">
+                <div className="badge-animated badge-bounce-1">
+                  <div className="badge-icon-wrapper">
+                    <Verified className="badge-icon rotating-slow" />
+                    <div className="icon-ring ring-1"></div>
+                    <div className="icon-ring ring-2"></div>
+                  </div>
+                  <div className="badge-content">
+                    <div className="badge-title">Garantie</div>
+                    <div className="badge-subtitle">3 ans inclus</div>
+                  </div>
+                  <div className="badge-shine"></div>
                 </div>
                 
-                <h1 className="hero-title">
-                  <span className="title-line">Pièces & Accessoires</span>
-                  <span className="title-line neon">de Qualité Premium</span>
-                </h1>
+                <div className="badge-animated badge-bounce-2">
+                  <div className="badge-icon-wrapper">
+                    <Speed className="badge-icon pulse-icon" />
+                    <div className="icon-ring ring-1"></div>
+                    <div className="icon-ring ring-2"></div>
+                  </div>
+                  <div className="badge-content">
+                    <div className="badge-title">Livraison</div>
+                    <div className="badge-subtitle">Express 24h</div>
+                  </div>
+                  <div className="badge-shine"></div>
+                </div>
                 
-                <p className="hero-description">
-                  Découvrez notre sélection exclusive de 
-                  <span className="highlight"> pièces automobiles premium </span> 
-                  et d'accessoires 
-                  <span className="highlight"> haute performance</span>.
-                </p>
+                <div className="badge-animated badge-bounce-3">
+                  <div className="badge-icon-wrapper">
+                    <Shield className="badge-icon float-icon" />
+                    <div className="icon-ring ring-1"></div>
+                    <div className="icon-ring ring-2"></div>
+              </div>
+                  <div className="badge-content">
+                    <div className="badge-title">Sécurité</div>
+                    <div className="badge-subtitle">100% garantie</div>
+            </div>
+                  <div className="badge-shine"></div>
+          </div>
+
+                <div className="badge-animated badge-bounce-4">
+                  <div className="badge-icon-wrapper">
+                    <AttachMoney className="badge-icon scale-icon" />
+                    <div className="icon-ring ring-1"></div>
+                    <div className="icon-ring ring-2"></div>
+                  </div>
+                  <div className="badge-content">
+                    <div className="badge-title">Financement</div>
+                    <div className="badge-subtitle">Flexibles</div>
+                  </div>
+                  <div className="badge-shine"></div>
+                </div>
+              </div>
+              <div className="badges-container">
+                <div className="badge-simple">
+                  <Verified className="badge-icon" />
+                  <div className="badge-text">
+                    <div className="badge-title">Garantie</div>
+                    <div className="badge-subtitle">3 ans</div>
+                    </div>
+                </div>
+                <div className="badge-simple">
+                  <Speed className="badge-icon" />
+                    <div className="badge-text">
+                    <div className="badge-title">Livraison</div>
+                    <div className="badge-subtitle">24h</div>
+                    </div>
+                  </div>
+                <div className="badge-simple">
+                  <Shield className="badge-icon" />
+                  <div className="badge-text">
+                    <div className="badge-title">Sécurité</div>
+                    <div className="badge-subtitle">100%</div>
+              </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Filtres et recherche */}
-          <div className="filters-section">
-            <div className="filters-container">
+          {/* Tabs */}
+          <div className="tabs-section">
+            <Tabs 
+              value={activeTab} 
+              onChange={(e, newValue) => setActiveTab(newValue)}
+              className="main-tabs"
+            >
+              <Tab 
+                label="Véhicules" 
+                icon={<DirectionsCar />} 
+                iconPosition="start"
+                className="tab-item"
+              />
+              <Tab 
+                label="Pièces détachées" 
+                icon={<Build />} 
+                iconPosition="start"
+                className="tab-item"
+              />
+            </Tabs>
+          </div>
+
+          {activeTab === 0 && (
+            <>
+              {/* Search and Filters */}
+              <div className="search-filters">
               <TextField
                 fullWidth
-                placeholder="Rechercher un produit..."
+                  placeholder="Rechercher par marque ou modèle..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                  className="search-input"
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Search style={{ color: '#00ff88' }} />
+                        <Search />
                     </InputAdornment>
                   ),
                 }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: '25px',
-                    '& fieldset': {
-                      borderColor: 'rgba(0, 255, 136, 0.3)',
-                    },
-                    '&:hover fieldset': {
-                      borderColor: '#00ff88',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#00ff88',
-                    },
-                  },
-                  '& .MuiInputBase-input': {
-                    color: 'white',
-                    '&::placeholder': {
-                      color: 'rgba(255, 255, 255, 0.7)',
-                    },
-                  },
-                }}
-              />
-              
-              <div className="filters-row">
-                <select 
-                  value={selectedCategory} 
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="category-select"
+                />
+                <Button
+                  variant="outlined"
+                  startIcon={<FilterList />}
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="filters-btn"
                 >
-                  {categories.map(category => (
-                    <option key={category.value} value={category.value}>
-                      {category.label}
-                    </option>
-                  ))}
-                </select>
-                
-                <select 
-                  value={sortBy} 
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="sort-select"
-                >
-                  <option value="name">Trier par nom</option>
-                  <option value="price-asc">Prix croissant</option>
-                  <option value="price-desc">Prix décroissant</option>
-                  <option value="rating">Meilleures notes</option>
-                </select>
-              </div>
-            </div>
+                  Filtres
+                </Button>
           </div>
 
-          {/* Grille des produits */}
-          <div className="products-grid">
-            {filteredProducts.map((product, index) => (
-              <Fade in={true} timeout={300 + index * 100} key={product.id}>
-                <Card 
-                  className={`product-card ${hoveredCard === product.id ? 'hovered' : ''}`}
-                  onMouseEnter={() => setHoveredCard(product.id)}
-                  onMouseLeave={() => setHoveredCard(null)}
-                >
-                  <div className="product-image-container">
-                    <img 
-                      src={product.image} 
-                      alt={product.nom}
-                      className="product-image"
-                      onClick={() => openPreview(product.image)}
-                      style={{ cursor: 'zoom-in' }}
-                    />
-                    <div 
-                      className="product-badge"
-                      style={{ backgroundColor: getBadgeColor(product.badge) }}
-                    >
-                      {product.badge}
-                    </div>
-                    {/* Bouton zoom sur la badge */}
-                    <button 
-                      className="zoom-btn" 
-                      aria-label="Zoomer l'image"
-                      onClick={(e) => { e.stopPropagation(); openPreview(product.image); }}
-                      title="Zoomer"
-                    >
-                      <ZoomIn style={{ color: '#fff' }} />
-                    </button>
-                    <div className="product-overlay">
-                      <IconButton 
-                        className="quick-view-btn"
-                        onClick={() => addToCart(product)}
-                      >
-                        <ShoppingCart />
-                      </IconButton>
-                    </div>
-                  </div>
-                  
-                  <CardContent className="product-content">
-                    <Typography variant="h6" className="product-title">
-                      {product.nom}
-                    </Typography>
-                    
-                    <Typography variant="body2" className="product-description">
-                      {product.description}
-                    </Typography>
-                    
-                    <div className="product-rating">
-                      <Rating value={product.note} precision={0.1} readOnly size="small" />
-                      <span className="rating-text">({product.nombreAvis})</span>
-                    </div>
-                    
-                    <div className="product-info">
-                      <Chip 
-                        label={product.categorie} 
-                        size="small" 
-                        className="category-chip"
-                      />
-                      <span className="product-stock">
-                        {product.stock > 0 ? `${product.stock} en stock` : 'Rupture de stock'}
-                      </span>
-                    </div>
-                  </CardContent>
-                  
-                  <CardActions className="product-actions">
-                    <div className="price-container">
-                      <span className="product-price">{product.prix}€</span>
-                      <span className="product-reference">Ref: {product.reference}</span>
-                    </div>
-                    
-                    <Button 
-                      variant="contained" 
-                      className="add-to-cart-btn"
-                      onClick={() => addToCart(product)}
-                      disabled={product.stock === 0}
-                      startIcon={<ShoppingCart />}
-                    >
-                      {product.stock > 0 ? 'Ajouter' : 'Indisponible'}
-                    </Button>
-                  </CardActions>
-                </Card>
-              </Fade>
-            ))}
-          </div>
+              {showFilters && <FiltersPanel />}
 
-          {filteredProducts.length === 0 && (
-            <div className="no-products">
-              <Typography variant="h5" className="no-products-title">
-                Aucun produit trouvé
+              {/* Vehicles Grid */}
+              <div className="vehicles-grid">
+                {console.log('Rendu des véhicules, nombre:', filteredVehicules.length)}
+                {filteredVehicules.map((vehicule) => {
+                  console.log('Rendu véhicule:', vehicule.id, vehicule.marque, vehicule.modele);
+                  return <VehiculeCard vehicule={vehicule} key={vehicule.id} />;
+                })}
+                    </div>
+                    
+              {filteredVehicules.length === 0 && (
+                <div className="no-results">
+                  <DirectionsCar className="no-results-icon" />
+                  <Typography variant="h6" className="no-results-title">
+                    Aucun véhicule trouvé
               </Typography>
-              <Typography variant="body1" className="no-products-text">
+                  <Typography variant="body2" className="no-results-text">
                 Essayez de modifier vos critères de recherche
               </Typography>
             </div>
           )}
-        </div>
-      </main>
-      {loading && (
-        <div className="container" style={{ padding: '20px 0' }}>
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <span>Chargement des articles...</span>
-          </div>
-        </div>
-      )}
+            </>
+          )}
 
-      {/* Footer */}
-      <footer className="footer">
-        <div className="container">
-          <div className="footer-content">
-            <div className="footer-logo">
-              <ShoppingCart />
+          {activeTab === 1 && (
+            <div className="pieces-section">
+              <Build className="pieces-icon" />
+              <Typography variant="h6" className="pieces-title">
+                Section pièces détachées en cours de développement
+              </Typography>
             </div>
-            <span>AutoSoft Boutique</span>
+          )}
           </div>
-          <p>© 2024 AutoSoft - L'avenir du garage management 🚗</p>
-        </div>
-      </footer>
+      </main>
 
-      {/* Snackbar */}
+      <VehiculeDialog />
+      <ContactFormDialog />
+
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
       >
         <Alert 
-          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
           severity={snackbar.severity}
-          sx={{ width: '100%' }}
+          className="snackbar-alert"
         >
           {snackbar.message}
         </Alert>
       </Snackbar>
-
-      {/* Preview image dialog (popup) */}
-      {previewOpen && (
-        <div className="image-preview-backdrop" onClick={closePreview}>
-          <div className="image-preview-container" onClick={(e) => e.stopPropagation()}>
-            <img 
-              src={previewSrc} 
-              alt="Aperçu produit"
-              className={`image-preview ${isZoomed ? 'zoomed' : ''}`}
-              onClick={() => setIsZoomed(!isZoomed)}
-              style={{ cursor: isZoomed ? 'zoom-out' : 'zoom-in' }}
-            />
-            <button className="close-preview" onClick={closePreview}>✕</button>
-            <button className="zoom-toggle" onClick={() => setIsZoomed(!isZoomed)} aria-label="Basculer le zoom">
-              {isZoomed ? <ZoomOut style={{ color: '#fff' }} /> : <ZoomIn style={{ color: '#fff' }} />}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Order dialog */}
-      <Dialog open={orderOpen} onClose={() => setOrderOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Finaliser l'achat</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            {orderProduct && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <img src={orderProduct.image} alt={orderProduct.nom} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8 }} />
-                <Box>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{orderProduct.nom}</Typography>
-                  <Typography variant="body2">Ref: {orderProduct.reference} — {orderProduct.prix}€</Typography>
-                </Box>
-              </Box>
-            )}
-            <TextField label="Nom complet" fullWidth required value={orderForm.nom} onChange={(e) => setOrderForm({ ...orderForm, nom: e.target.value })} />
-            <TextField label="Email" type="email" fullWidth required value={orderForm.email} onChange={(e) => setOrderForm({ ...orderForm, email: e.target.value })} />
-            <TextField label="Téléphone" fullWidth required value={orderForm.telephone} onChange={(e) => setOrderForm({ ...orderForm, telephone: e.target.value })} />
-            <TextField label="Adresse complète" fullWidth required value={orderForm.adresse} onChange={(e) => setOrderForm({ ...orderForm, adresse: e.target.value })} />
-            <TextField label="Quantité" type="number" inputProps={{ min: 1, step: 1 }} fullWidth value={orderQty} onChange={(e) => setOrderQty(e.target.value)} />
-            <Alert severity="info">Votre localisation sera récupérée automatiquement (si autorisée) pour faciliter la livraison.</Alert>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOrderOpen(false)}>Annuler</Button>
-          <Button variant="contained" onClick={submitOrder} disabled={orderSubmitting}>{orderSubmitting ? 'Envoi...' : 'Confirmer la commande'}</Button>
-        </DialogActions>
-      </Dialog>
 
       <style>{`
         .boutique-container {
@@ -874,68 +1373,29 @@ const BoutiqueClientPage = () => {
           color: rgba(255, 255, 255, 0.6);
         }
 
-        .desktop-nav {
+        .header-actions {
           display: flex;
-          gap: 30px;
+          gap: 15px;
         }
 
-        .nav-link {
-          color: rgba(255, 255, 255, 0.85);
-          text-decoration: none;
+        .back-btn, .home-btn {
+          background: rgba(255, 255, 255, 0.1);
+          color: white;
+          border: 1px solid rgba(0, 255, 136, 0.3);
+          backdrop-filter: blur(10px);
+          border-radius: 25px;
+          padding: 10px 20px;
           font-weight: 600;
-          transition: color 0.2s ease, transform 0.2s ease;
-          position: relative;
-          background: transparent;
-          border: none;
-          padding: 6px 0;
+          transition: all 0.3s ease;
         }
 
-        .nav-link:hover {
-          color: #00ff88;
+        .back-btn:hover, .home-btn:hover {
+          background: rgba(0, 255, 136, 0.1);
+          border-color: #00ff88;
           transform: translateY(-2px);
         }
 
-        .nav-link::after {
-          content: '';
-          position: absolute;
-          bottom: -5px;
-          left: 0;
-          width: 0;
-          height: 2px;
-          background: #00ff88;
-          transition: width 0.3s ease;
-        }
-
-        .nav-link:hover::after {
-          width: 100%;
-        }
-
-        .mobile-menu-btn {
-          display: none;
-          background: none;
-          border: none;
-          color: white;
-          font-size: 24px;
-          cursor: pointer;
-        }
-
-        .mobile-menu {
-          background: transparent;
-          border-top: none;
-          padding: 20px;
-        }
-
-        .mobile-nav-link {
-          display: block;
-          color: rgba(255, 255, 255, 0.85);
-          text-decoration: none;
-          padding: 12px 0;
-          border: none;
-          background: transparent;
-          text-align: left;
-        }
-
-        /* Section principale */
+        /* Main section */
         .main-section {
           padding-top: 120px;
           min-height: 100vh;
@@ -945,92 +1405,11 @@ const BoutiqueClientPage = () => {
 
         /* Hero section */
         .hero-section {
+          text-align: center;
           padding: 60px 0;
           position: relative;
         }
 
-        .hero-content {
-          position: relative;
-          text-align: center;
-        }
-
-        /* Badges 3D */
-        .badges-container {
-          position: absolute;
-          top: -50px;
-          right: -50px;
-          z-index: 5;
-        }
-
-        .badge-3d {
-          position: absolute;
-          width: 120px;
-          height: 80px;
-          background: linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(0, 170, 85, 0.2));
-          border-radius: 15px;
-          border: 1px solid rgba(0, 255, 136, 0.3);
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 10px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          backdrop-filter: blur(10px);
-          animation: badgeFloat 6s ease-in-out infinite;
-        }
-
-        .badge-3d:nth-child(1) {
-          top: 0;
-          right: 0;
-          animation-delay: 0s;
-        }
-
-        .badge-3d:nth-child(2) {
-          top: 100px;
-          right: 80px;
-          animation-delay: 2s;
-        }
-
-        .badge-3d:nth-child(3) {
-          top: 200px;
-          right: 20px;
-          animation-delay: 4s;
-        }
-
-        .badge-icon {
-          font-size: 24px;
-        }
-
-        .badge-text {
-          flex: 1;
-        }
-
-        .badge-title {
-          font-size: 11px;
-          font-weight: 800;
-          color: #00ff88;
-          text-shadow: 0 0 8px rgba(0, 255, 136, 0.5);
-          line-height: 1.2;
-        }
-
-        .badge-subtitle {
-          font-size: 9px;
-          color: #ffffff;
-          font-weight: 600;
-          text-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
-          line-height: 1.1;
-        }
-
-        .badge-glow {
-          position: absolute;
-          inset: -5px;
-          border-radius: 20px;
-          filter: blur(15px);
-          opacity: 0.3;
-          z-index: -1;
-        }
-
-        /* Hero content */
         .welcome-badge {
           display: inline-flex;
           align-items: center;
@@ -1049,7 +1428,7 @@ const BoutiqueClientPage = () => {
         }
 
         .hero-title {
-          font-size: 64px;
+          font-size: 48px;
           font-weight: 900;
           line-height: 1.1;
           margin: 0 0 30px 0;
@@ -1083,349 +1462,943 @@ const BoutiqueClientPage = () => {
           margin-right: auto;
         }
 
+        .fade-in {
+          animation: fadeIn 1s ease-out 0.4s backwards;
+        }
+
+        /* Badges animés */
+        .badges-container {
+          display: flex;
+          gap: 20px;
+          justify-content: center;
+          margin-top: 40px;
+          flex-wrap: wrap;
+        }
+
+        .badge-animated {
+          display: flex;
+          align-items: center;
+          gap: 15px;
+          background: rgba(0, 255, 136, 0.1);
+          border: 2px solid rgba(0, 255, 136, 0.3);
+          border-radius: 25px;
+          padding: 15px 25px;
+          backdrop-filter: blur(10px);
+          position: relative;
+          overflow: hidden;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .badge-bounce-1 {
+          animation: bounceIn 0.6s ease-out 0.2s backwards;
+        }
+
+        .badge-bounce-2 {
+          animation: bounceIn 0.6s ease-out 0.4s backwards;
+        }
+
+        .badge-bounce-3 {
+          animation: bounceIn 0.6s ease-out 0.6s backwards;
+        }
+
+        .badge-bounce-4 {
+          animation: bounceIn 0.6s ease-out 0.8s backwards;
+        }
+
+        .badge-animated:hover {
+          background: rgba(0, 255, 136, 0.2);
+          border-color: #00ff88;
+          transform: translateY(-5px) scale(1.05);
+          box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
+        }
+
+        .badge-icon-wrapper {
+          position: relative;
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .badge-icon {
+          font-size: 24px;
+          color: #00ff88;
+          z-index: 2;
+        }
+
+        .rotating-slow {
+          animation: rotateSlow 8s linear infinite;
+        }
+
+        .pulse-icon {
+          animation: iconPulse 2s ease-in-out infinite;
+        }
+
+        .float-icon {
+          animation: iconFloat 3s ease-in-out infinite;
+        }
+
+        .scale-icon {
+          animation: iconScale 2s ease-in-out infinite;
+        }
+
+        .icon-ring {
+          position: absolute;
+          inset: -5px;
+          border: 2px solid #00ff88;
+          border-radius: 50%;
+          opacity: 0;
+        }
+
+        .ring-1 {
+          animation: ringPulse 2s ease-out infinite;
+        }
+
+        .ring-2 {
+          animation: ringPulse 2s ease-out 1s infinite;
+        }
+
+        .badge-content {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .badge-title {
+          font-size: 14px;
+          font-weight: 700;
+          color: #00ff88;
+          margin-bottom: 2px;
+        }
+
+        .badge-subtitle {
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.7);
+        }
+
+        .badge-shine {
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+          animation: shine 3s infinite;
+        }
+
+        .pulse {
+          animation: textPulse 2s ease-in-out infinite;
+        }
+
+        /* Stats row */
+        .stats-row {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 40px;
+          margin: 40px 0;
+          padding: 20px;
+          background: rgba(0, 255, 136, 0.05);
+          border-radius: 20px;
+          border: 1px solid rgba(0, 255, 136, 0.2);
+          backdrop-filter: blur(10px);
+        }
+
+        .fade-in-up {
+          animation: fadeInUp 0.8s ease-out 0.6s backwards;
+        }
+
+        .stat-item {
+          text-align: center;
+        }
+
+        .stat-number {
+          font-size: 32px;
+          font-weight: 900;
+          color: #00ff88;
+          text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+          margin-bottom: 5px;
+        }
+
+        .counting {
+          animation: countUp 2s ease-out;
+        }
+
+        .stat-label {
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.7);
+          font-weight: 600;
+        }
+
+        .stat-divider {
+          width: 2px;
+          height: 40px;
+          background: linear-gradient(180deg, transparent, #00ff88, transparent);
+          animation: dividerGlow 2s ease-in-out infinite;
+        }
+
         .highlight {
           color: #00ff88;
           font-weight: 600;
           text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
         }
 
-        /* Filtres */
-        .filters-section {
-          padding: 40px 0;
-        }
-
-        .filters-container {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
-
-        .filters-row {
+        /* Badges simples et stables */
+        .badges-container {
           display: flex;
           gap: 20px;
           justify-content: center;
+          margin-top: 30px;
+          flex-wrap: wrap;
         }
 
-        .category-select, .sort-select {
-          padding: 12px 20px;
-          border-radius: 25px;
+        .badge-simple {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: rgba(0, 255, 136, 0.1);
           border: 1px solid rgba(0, 255, 136, 0.3);
+          border-radius: 25px;
+          padding: 12px 20px;
+          backdrop-filter: blur(10px);
+        }
+
+        .badge-simple:hover {
+          background: rgba(0, 255, 136, 0.2);
+          border-color: #00ff88;
+        }
+
+        .badge-icon {
+          font-size: 20px;
+          color: #00ff88;
+        }
+
+        .badge-text {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .badge-title {
+          font-size: 12px;
+          font-weight: 700;
+          color: #00ff88;
+          line-height: 1.2;
+        }
+
+        .badge-subtitle {
+          font-size: 10px;
+          color: rgba(255, 255, 255, 0.8);
+          font-weight: 600;
+          line-height: 1.1;
+        }
+
+
+        /* Tabs */
+        .tabs-section {
+          margin: 40px 0;
+        }
+
+        .main-tabs {
+          border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+        }
+
+        .tab-item {
+          color: rgba(255, 255, 255, 0.8);
+          font-weight: 600;
+        }
+
+        .tab-item.Mui-selected {
+          color: #00ff88;
+        }
+
+        /* Search and filters */
+        .search-filters {
+          display: flex;
+          gap: 20px;
+          margin-bottom: 30px;
+          align-items: center;
+        }
+
+        .search-input {
+          flex: 1;
+        }
+
+        .search-input .MuiInputBase-root {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 25px;
+          color: white;
+        }
+
+        .search-input .MuiInputBase-input {
+          color: white;
+        }
+
+        .search-input .MuiInputBase-input::placeholder {
+          color: rgba(255, 255, 255, 0.6);
+        }
+
+        .filters-btn {
           background: rgba(255, 255, 255, 0.1);
           color: white;
-          font-size: 14px;
+          border: 1px solid rgba(0, 255, 136, 0.3);
           backdrop-filter: blur(10px);
+          border-radius: 25px;
+          padding: 12px 24px;
+          font-weight: 600;
           transition: all 0.3s ease;
         }
 
-        .category-select:focus, .sort-select:focus {
-          outline: none;
+        .filters-btn:hover {
+          background: rgba(0, 255, 136, 0.1);
           border-color: #00ff88;
-          box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+          transform: translateY(-2px);
         }
 
-        .category-select option, .sort-select option {
-          background: #1a1a1a;
+        /* Filters panel */
+        .filters-panel {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(0, 255, 136, 0.2);
+          border-radius: 15px;
+          padding: 20px;
+          margin-bottom: 30px;
+          backdrop-filter: blur(10px);
+        }
+
+        .filters-title {
+          color: #00ff88;
+          margin-bottom: 20px;
+          font-weight: 700;
+        }
+
+        .filters-panel .MuiFormControl-root {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 10px;
+        }
+
+        .filters-panel .MuiInputBase-root {
           color: white;
         }
 
-        /* Grille des produits */
-        .products-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-          gap: 30px;
-          padding: 40px 0;
+        .filters-panel .MuiInputLabel-root {
+          color: rgba(255, 255, 255, 0.7);
         }
 
-        .product-card {
+        .price-label {
+          color: rgba(255, 255, 255, 0.8);
+          margin-bottom: 10px;
+          font-weight: 600;
+        }
+
+        .price-slider .MuiSlider-thumb {
+          background: #00ff88;
+          box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .price-slider .MuiSlider-track {
+          background: linear-gradient(90deg, #00ff88, #00aa55);
+        }
+
+        /* Vehicles grid */
+        .vehicles-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+          gap: 30px;
+          margin-bottom: 40px;
+        }
+
+        /* Vehicle card */
+        .vehicule-card {
           background: rgba(255, 255, 255, 0.05);
           border: 1px solid rgba(0, 255, 136, 0.2);
           border-radius: 20px;
           overflow: hidden;
-          transition: all 0.3s ease;
           backdrop-filter: blur(10px);
           position: relative;
         }
 
-        .product-card:hover {
-          transform: translateY(-10px) scale(1.02);
-          border-color: #00ff88;
+        .vehicule-card:hover {
           box-shadow: 0 20px 40px rgba(0, 255, 136, 0.2);
+          border-color: #00ff88;
         }
 
-        .product-image-container {
+        .card-image-container {
           position: relative;
           height: 200px;
           overflow: hidden;
         }
 
-        .product-image {
+        .card-image {
           width: 100%;
           height: 100%;
-          object-fit: cover;
-          transition: transform 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 4rem;
         }
 
-        .product-card:hover .product-image {
-          transform: scale(1.1);
+        .car-icon {
+          font-size: 4rem;
+          opacity: 0.8;
+          color: rgba(255, 255, 255, 0.9);
         }
 
-        .product-badge {
+        .status-chip {
           position: absolute;
           top: 10px;
           right: 10px;
-          padding: 5px 10px;
-          border-radius: 15px;
-          font-size: 12px;
-          font-weight: 600;
-          color: white;
-          text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+          font-weight: 700;
         }
 
-        .zoom-btn {
+        .status-chip.available {
+          background: linear-gradient(135deg, #00ff88, #00aa55);
+          color: #000;
+        }
+
+        .status-chip.unavailable {
+          background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+          color: white;
+        }
+
+        .favorite-btn {
           position: absolute;
           top: 10px;
           left: 10px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
-          background: rgba(0,0,0,0.45);
-          border: 1px solid rgba(255,255,255,0.3);
-          cursor: pointer;
-          backdrop-filter: blur(6px);
-          transition: transform 0.15s ease, background 0.2s ease;
-          z-index: 3;
-          box-shadow: 0 4px 14px rgba(0,0,0,0.35);
-        }
-
-        .zoom-btn:hover {
-          transform: scale(1.06);
-          background: rgba(0,0,0,0.6);
-        }
-
-        .product-overlay {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.7);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          opacity: 0;
-          transition: opacity 0.3s ease;
-          z-index: 2;
-        }
-
-        .product-card:hover .product-overlay {
-          opacity: 1;
-        }
-
-        .quick-view-btn {
-          background: rgba(0, 255, 136, 0.9);
+          background: rgba(0, 0, 0, 0.5);
           color: white;
-          border-radius: 50%;
-          width: 50px;
-          height: 50px;
+          backdrop-filter: blur(10px);
         }
 
-        .quick-view-btn:hover {
-          background: #00ff88;
-          transform: scale(1.1);
+        .favorite-btn:hover {
+          background: rgba(255, 107, 107, 0.8);
         }
 
-        .product-content {
+        .card-content {
           padding: 20px;
         }
 
-        .product-title {
-          font-size: 18px;
+        .vehicle-title {
+          color: white;
           font-weight: 700;
-          color: #00ff88;
-          margin-bottom: 10px;
-        }
-
-        .product-description {
-          color: rgba(255, 255, 255, 0.8);
           margin-bottom: 15px;
-          line-height: 1.4;
         }
 
-        .product-rating {
+        .vehicle-specs {
           display: flex;
           align-items: center;
           gap: 10px;
-          margin-bottom: 15px;
+          margin-bottom: 10px;
         }
 
-        .rating-text {
-          color: rgba(255, 255, 255, 0.6);
-          font-size: 14px;
+        .spec-text {
+          color: rgba(255, 255, 255, 0.7);
+          font-weight: 600;
         }
 
-        .product-info {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .category-chip {
+        .spec-chip {
           background: rgba(0, 255, 136, 0.2);
           color: #00ff88;
           border: 1px solid rgba(0, 255, 136, 0.3);
+          font-weight: 600;
         }
 
-        .product-stock {
-          font-size: 12px;
+        .vehicle-details {
           color: rgba(255, 255, 255, 0.6);
+          margin-bottom: 15px;
         }
 
-        .product-actions {
-          padding: 20px;
+        .vehicle-features {
+          margin-bottom: 20px;
+        }
+
+        .feature-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+
+        .feature-icon {
+          color: #00ff88;
+          font-size: 16px;
+        }
+
+        .vehicle-description {
+          color: rgba(255, 255, 255, 0.8);
+          margin-bottom: 20px;
+          min-height: 40px;
+        }
+
+        .price-section {
+          margin-bottom: 20px;
+        }
+
+        .price {
+          color: #00ff88;
+          font-weight: 700;
+          font-size: 1.5rem;
+        }
+
+        .rental-price {
+          color: rgba(255, 255, 255, 0.6);
+          font-size: 0.9rem;
+        }
+
+        .features-tags {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 20px;
+        }
+
+        .feature-tag {
+          background: rgba(0, 255, 136, 0.1);
+          color: #00ff88;
+          border: 1px solid rgba(0, 255, 136, 0.3);
+          font-weight: 600;
+        }
+
+        .more-features {
+          background: rgba(255, 255, 255, 0.1);
+          color: rgba(255, 255, 255, 0.8);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .card-actions {
+          padding: 0 20px 20px;
+        }
+
+        .action-button {
+          background: linear-gradient(135deg, #00ff88, #00aa55);
+          color: #000;
+          font-weight: 700;
+          border-radius: 25px;
+          padding: 12px 24px;
+        }
+
+        .action-button:hover {
+          box-shadow: 0 10px 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .action-button:disabled {
+          background: rgba(255, 255, 255, 0.1);
+          color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Dialog */
+        .vehicle-dialog .MuiDialog-paper,
+        .contact-form-dialog .MuiDialog-paper {
+          background: rgba(10, 10, 10, 0.95);
+          border: 1px solid rgba(0, 255, 136, 0.2);
+          border-radius: 20px;
+          backdrop-filter: blur(20px);
+          animation: none !important;
+          transform: none !important;
+          transition: none !important;
+        }
+
+        .vehicle-dialog .MuiDialog-root,
+        .contact-form-dialog .MuiDialog-root {
+          animation: none !important;
+        }
+
+        .vehicle-dialog .MuiBackdrop-root,
+        .contact-form-dialog .MuiBackdrop-root {
+          animation: none !important;
+          transition: none !important;
+        }
+
+        .vehicle-dialog *,
+        .contact-form-dialog * {
+          animation: none !important;
+          transition: none !important;
+        }
+
+        .dialog-title {
+          background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(0, 170, 85, 0.1));
+          border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+        }
+
+        .dialog-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
         }
 
-        .price-container {
-          display: flex;
-          flex-direction: column;
+        .close-btn {
+          color: rgba(255, 255, 255, 0.7);
         }
 
-        .product-price {
-          font-size: 24px;
-          font-weight: 700;
+        .close-btn:hover {
           color: #00ff88;
         }
 
-        .product-reference {
-          font-size: 12px;
-          color: rgba(255, 255, 255, 0.6);
+        .dialog-content {
+          background: rgba(255, 255, 255, 0.02);
+          animation: none !important;
+          transform: none !important;
+          transition: none !important;
+        }
+
+        .vehicle-preview {
+          margin-bottom: 20px;
+        }
+
+        .preview-image {
+          width: 100%;
+          height: 200px;
+          border-radius: 15px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .preview-car-icon {
+          font-size: 5rem;
+          opacity: 0.8;
+          color: rgba(255, 255, 255, 0.9);
+        }
+
+        .features-title {
+          color: #00ff88;
+          margin-bottom: 15px;
+          font-weight: 700;
+        }
+
+        .feature-item-dialog {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+
+        .check-icon {
+          color: #00ff88;
+          font-size: 16px;
+        }
+
+        .purchase-type {
+          margin-bottom: 20px;
+        }
+
+        .purchase-type .MuiFormLabel-root {
+          color: #00ff88;
+          font-weight: 700;
+        }
+
+        .purchase-type .MuiRadio-root {
+          color: #00ff88;
+        }
+
+        .purchase-type .MuiFormControlLabel-label {
+          color: white;
+        }
+
+        .duration-select {
+          margin-bottom: 20px;
+        }
+
+        .duration-select .MuiInputBase-root {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 10px;
+          color: white;
+        }
+
+        .duration-select .MuiInputLabel-root {
+          color: rgba(255, 255, 255, 0.7);
+        }
+
+        .color-selector {
+          margin-bottom: 20px;
+        }
+
+        .color-selector .MuiFormLabel-root {
+          color: #00ff88;
+          font-weight: 700;
+          margin-bottom: 10px;
+        }
+
+        .color-option {
+          padding: 10px;
+          border: 2px solid transparent;
+          border-radius: 10px;
+          cursor: pointer;
+          text-align: center;
+          min-height: 60px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+
+        .color-option:hover {
+          border-color: #00ff88;
+        }
+
+        .color-option.selected {
+          border-color: #00ff88;
+          box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .color-name {
+          font-weight: 700;
+          text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        .color-price {
+          font-weight: 600;
+          text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        .order-summary {
+          background: rgba(0, 255, 136, 0.1);
+          border: 1px solid rgba(0, 255, 136, 0.2);
+          border-radius: 15px;
+          padding: 20px;
+        }
+
+        .summary-title {
+          color: #00ff88;
+          margin-bottom: 15px;
+          font-weight: 700;
+        }
+
+        .summary-line {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 8px;
+        }
+
+        .summary-line {
+          color: rgba(255, 255, 255, 0.8);
+        }
+
+        .summary-divider {
+          margin: 15px 0;
+          background: rgba(0, 255, 136, 0.2);
+        }
+
+        .summary-total {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .total-label {
+          color: #00ff88;
+          font-weight: 700;
+        }
+
+        .total-price {
+          color: #00ff88;
+          font-weight: 700;
+          font-size: 1.2rem;
+        }
+
+        .dialog-actions {
+          background: rgba(0, 0, 0, 0.2);
+          border-top: 1px solid rgba(0, 255, 136, 0.2);
+        }
+
+        .cancel-btn {
+          color: rgba(255, 255, 255, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 25px;
+          padding: 10px 20px;
         }
 
         .add-to-cart-btn {
           background: linear-gradient(135deg, #00ff88, #00aa55);
           color: #000;
+          font-weight: 700;
           border-radius: 25px;
-          padding: 10px 20px;
-          font-weight: 600;
-          transition: all 0.3s ease;
+          padding: 12px 24px;
         }
 
         .add-to-cart-btn:hover {
-          transform: translateY(-2px);
           box-shadow: 0 10px 20px rgba(0, 255, 136, 0.3);
         }
 
-        .add-to-cart-btn:disabled {
-          background: rgba(255, 255, 255, 0.1);
-          color: rgba(255, 255, 255, 0.5);
+        /* Contact Form */
+        .contact-form {
+          padding: 20px 0;
         }
 
-        /* No products */
-        .no-products {
+        .form-field .MuiInputBase-root {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 10px;
+          color: white;
+        }
+
+        .form-field .MuiInputBase-input {
+          color: white;
+        }
+
+        .form-field .MuiInputBase-input::placeholder {
+          color: rgba(255, 255, 255, 0.6);
+        }
+
+        .form-field .MuiInputLabel-root {
+          color: rgba(255, 255, 255, 0.7);
+        }
+
+        .form-field .MuiInputLabel-root.Mui-focused {
+          color: #00ff88;
+        }
+
+        .form-field .MuiOutlinedInput-root {
+          border-radius: 10px;
+        }
+
+        .form-field .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
+          border-color: rgba(0, 255, 136, 0.3);
+        }
+
+        .form-field .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+          border-color: #00ff88;
+        }
+
+        .form-field .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+          border-color: #00ff88;
+        }
+
+        .form-field .MuiFormHelperText-root {
+          color: #ff6b6b;
+        }
+
+        .submit-btn {
+          background: linear-gradient(135deg, #00ff88, #00aa55);
+          color: #000;
+          font-weight: 700;
+          border-radius: 25px;
+          padding: 12px 24px;
+        }
+
+        .submit-btn:hover {
+          box-shadow: 0 10px 20px rgba(0, 255, 136, 0.3);
+        }
+
+        /* No results */
+        .no-results {
           text-align: center;
           padding: 60px 20px;
         }
 
-        .no-products-title {
-          color: #00ff88;
+        .no-results-icon {
+          font-size: 4rem;
+          color: rgba(255, 255, 255, 0.3);
           margin-bottom: 20px;
         }
 
-        .no-products-text {
+        .no-results-title {
+          color: rgba(255, 255, 255, 0.8);
+          margin-bottom: 10px;
+        }
+
+        .no-results-text {
+          color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Pieces section */
+        .pieces-section {
+          text-align: center;
+          padding: 60px 20px;
+        }
+
+        .pieces-icon {
+          font-size: 4rem;
+          color: rgba(255, 255, 255, 0.3);
+          margin-bottom: 20px;
+        }
+
+        .pieces-title {
           color: rgba(255, 255, 255, 0.8);
         }
 
-        /* Footer */
-        .footer {
-          border-top: 1px solid rgba(0, 255, 136, 0.2);
-          background: rgba(0, 0, 0, 0.3);
-          padding: 30px 0;
-          position: relative;
-          z-index: 10;
-        }
-
-        .footer-content {
+        /* Loading */
+        .loading-container {
           display: flex;
+          flex-direction: column;
           align-items: center;
           justify-content: center;
-          flex-direction: column;
-          gap: 15px;
-          text-align: center;
+          height: 50vh;
+          gap: 20px;
         }
 
-        .footer-logo {
-          display: flex;
-          align-items: center;
-          gap: 10px;
+        .loading-spinner {
           color: #00ff88;
         }
 
-        /* Image preview */
-        .image-preview-backdrop {
-          position: fixed;
-          inset: 0;
-          background: rgba(0,0,0,0.8);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 2000;
-          padding: 20px;
-        }
-        .image-preview-container {
-          position: relative;
-          max-width: 90vw;
-          max-height: 90vh;
-        }
-        .image-preview {
-          max-width: 90vw;
-          max-height: 90vh;
-          object-fit: contain;
-          transition: transform 0.2s ease;
-        }
-        .image-preview.zoomed {
-          transform: scale(1.8);
-        }
-        .close-preview {
-          position: absolute;
-          top: -10px;
-          right: -10px;
-          background: rgba(255,255,255,0.15);
-          color: white;
-          border: 1px solid rgba(255,255,255,0.3);
-          padding: 6px 10px;
-          border-radius: 20px;
-          cursor: pointer;
-          backdrop-filter: blur(6px);
-        }
-        .zoom-toggle {
-          position: absolute;
-          right: -10px;
-          bottom: -10px;
-          background: rgba(255,255,255,0.15);
-          border: 1px solid rgba(255,255,255,0.3);
-          border-radius: 20px;
-          padding: 6px 10px;
-          cursor: pointer;
-          backdrop-filter: blur(6px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
+        .loading-text {
+          color: rgba(255, 255, 255, 0.8);
+          font-size: 1.1rem;
         }
 
-        /* Animations */
+        /* Snackbar */
+        .snackbar-alert {
+          background: rgba(10, 10, 10, 0.95);
+          border: 1px solid rgba(0, 255, 136, 0.2);
+          backdrop-filter: blur(10px);
+        }
+
+        /* Animations avancées */
         @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-20px); }
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-20px) rotate(180deg); }
         }
 
-        @keyframes logoFloat {
-          0%, 100% { transform: rotate(12deg) translateY(0px); }
-          50% { transform: rotate(12deg) translateY(-10px); }
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+
+        @keyframes glow {
+          0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.3); }
+          50% { box-shadow: 0 0 40px rgba(0, 255, 136, 0.6); }
+        }
+
+        @keyframes slideInLeft {
+          from { transform: translateX(-100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(30px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes scaleIn {
+          from { transform: scale(0.8); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+
+        @keyframes neonPulse {
+          0%, 100% { 
+            text-shadow: 
+              0 0 10px rgba(0, 255, 136, 0.8),
+              0 0 20px rgba(0, 255, 136, 0.6),
+              0 0 30px rgba(0, 255, 136, 0.4);
+          }
+          50% { 
+            text-shadow: 
+              0 0 20px rgba(0, 255, 136, 1),
+              0 0 30px rgba(0, 255, 136, 0.8),
+              0 0 40px rgba(0, 255, 136, 0.6);
+          }
         }
 
         @keyframes badgeFloat {
@@ -1433,9 +2406,72 @@ const BoutiqueClientPage = () => {
           50% { transform: translateY(-10px); }
         }
 
-        @keyframes glow {
-          0% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.3); }
-          100% { box-shadow: 0 0 30px rgba(0, 255, 136, 0.6); }
+        @keyframes rotate {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        @keyframes rotateSlow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        @keyframes bounce {
+          0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+          40% { transform: translateY(-10px); }
+          60% { transform: translateY(-5px); }
+        }
+
+        @keyframes bounceIn {
+          0% { transform: scale(0.3); opacity: 0; }
+          50% { transform: scale(1.05); }
+          70% { transform: scale(0.9); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes countUp {
+          from { transform: scale(0.5); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes dividerGlow {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 1; }
+        }
+
+        @keyframes shine {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+
+        @keyframes iconPulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.2); }
+        }
+
+        @keyframes iconFloat {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-5px); }
+        }
+
+        @keyframes iconScale {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+        }
+
+        @keyframes ringPulse {
+          0% { transform: scale(0.8); opacity: 1; }
+          100% { transform: scale(1.4); opacity: 0; }
+        }
+
+        @keyframes textPulse {
+          0%, 100% { opacity: 0.8; }
+          50% { opacity: 1; }
+        }
+
+        @keyframes logoFloat {
+          0%, 100% { transform: rotate(12deg) translateY(0px); }
+          50% { transform: rotate(12deg) translateY(-5px); }
         }
 
         @keyframes twinkle {
@@ -1445,28 +2481,20 @@ const BoutiqueClientPage = () => {
 
         /* Responsive */
         @media (max-width: 768px) {
-          .desktop-nav {
-            display: none;
-          }
-
-          .mobile-menu-btn {
-            display: block;
-          }
-
           .hero-title {
-            font-size: 48px;
+            font-size: 36px;
+          }
+
+          .vehicles-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .search-filters {
+            flex-direction: column;
           }
 
           .badges-container {
             display: none;
-          }
-
-          .filters-row {
-            flex-direction: column;
-          }
-
-          .products-grid {
-            grid-template-columns: 1fr;
           }
         }
       `}</style>

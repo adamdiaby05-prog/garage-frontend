@@ -90,7 +90,14 @@ export const vehiculesAPI = {
   getAll: () => api.get('/vehicules'),
   getById: (id) => api.get(`/vehicules/${id}`),
   getByClient: (clientId) => api.get(`/vehicules?client_id=${clientId}`),
-  getClientVehicules: () => api.get('/client/vehicules').then((r) => r.data),
+  getClientVehicules: () => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (!user.id) {
+      console.error('Aucun utilisateur connecté');
+      return Promise.reject(new Error('Utilisateur non connecté'));
+    }
+    return api.get(`/client/vehicules?user_id=${user.id}`).then((r) => r.data);
+  },
   getMecanicienVehicules: () => api.get('/mecanicien/vehicules'),
   create: (vehiculeData) => api.post('/vehicules', vehiculeData),
   update: (id, vehiculeData) => api.put(`/vehicules/${id}`, vehiculeData),

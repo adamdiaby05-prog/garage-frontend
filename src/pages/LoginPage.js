@@ -47,7 +47,13 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      const { data } = await authAPI.login(form);
+      // Préparer les données pour l'API
+      const loginData = {
+        email: form.email,
+        mot_de_passe: form.password // Convertir password en mot_de_passe
+      };
+      
+      const { data } = await authAPI.login(loginData);
       try { console.log('🔐 Login OK → payload:', data); } catch {}
       // Normaliser le rôle à partir de la valeur backend et des attributs utilisateur
       const rawUser = data.user || {};

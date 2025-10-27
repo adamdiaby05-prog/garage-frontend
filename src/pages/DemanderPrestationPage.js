@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import { Send, Build } from '@mui/icons-material';
 import ModernPageTemplate from '../components/ModernPageTemplate';
-import { servicesAPI, vehiculesAPI, demandesPrestationsAPI } from '../services/api';
+import { servicesAPI, vehiculesAPI, demandesPrestationsAPI, authAPI } from '../services/api';
 
 const DemanderPrestationPage = () => {
   const [services, setServices] = useState([]);
@@ -75,11 +75,26 @@ const DemanderPrestationPage = () => {
       setError('');
       setSuccess('');
 
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const clientId = user.client_id;
+      let user = JSON.parse(localStorage.getItem('user') || '{}');
+      let clientId = user.client_id;
+
+      // Si pas de client_id, essayer de récupérer les données utilisateur depuis le serveur
+      if (!clientId) {
+        try {
+          const meResponse = await authAPI.me();
+          const updatedUser = meResponse.data.user;
+          clientId = updatedUser.client_id;
+          
+          // Mettre à jour le localStorage avec les données fraîches
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          user = updatedUser;
+        } catch (meError) {
+          console.error('Erreur récupération données utilisateur:', meError);
+        }
+      }
 
       if (!clientId) {
-        setError('Client non identifié');
+        setError('Client non identifié. Veuillez vous reconnecter.');
         return;
       }
 

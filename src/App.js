@@ -8,6 +8,7 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import HomePage from './pages/HomePage';
 import BoutiqueClientPage from './pages/BoutiqueClientPage';
+import VehiculeOptionsPage from './pages/VehiculeOptionsPage';
 import ClientsPage from './pages/ClientsPage';
 import EmployesPage from './pages/EmployesPage';
 import VehiculesPage from './pages/VehiculesPage';
@@ -179,8 +180,9 @@ const App = () => {
       <CssBaseline />
       <Router>
         <Box sx={{ display: 'flex' }}>
-          {/* Cacher Sidebar automatiquement via son retour null en /login, /signup, et accueil invité */}
-          {<Sidebar key={(localStorage.getItem('user') && (() => { try { return JSON.parse(localStorage.getItem('user')).role } catch { return 'guest' } })()) || 'guest'} userRole={(() => {
+          {/* Cacher Sidebar sur certaines pages */}
+          {!['/boutique-client', '/vehicule-options'].some(path => window.location.pathname.startsWith(path)) && 
+           <Sidebar key={(localStorage.getItem('user') && (() => { try { return JSON.parse(localStorage.getItem('user')).role } catch { return 'guest' } })()) || 'guest'} userRole={(() => {
             try {
               const storedUser = localStorage.getItem('user');
               if (storedUser) {
@@ -197,9 +199,13 @@ const App = () => {
             sx={{
               flexGrow: 1,
               p: 0,
-              width: { md: `calc(100% - 240px)` },
-              mt: { xs: 7, md: 8 },
-              backgroundColor: window.location.pathname === '/boutique-client' 
+              width: ['/boutique-client', '/vehicule-options'].some(path => window.location.pathname.startsWith(path)) 
+                ? '100%' 
+                : { md: `calc(100% - 240px)` },
+              mt: ['/boutique-client', '/vehicule-options'].some(path => window.location.pathname.startsWith(path)) 
+                ? 0 
+                : { xs: 7, md: 8 },
+              backgroundColor: ['/boutique-client', '/vehicule-options'].some(path => window.location.pathname.startsWith(path))
                 ? 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)' 
                 : 'transparent',
               minHeight: '100vh'
@@ -259,6 +265,7 @@ const App = () => {
               <Route path="/boutique" element={<ProtectedRoute element={<BoutiquePage />} roles={[ 'admin' ]} />} />
               <Route path="/commandes" element={<ProtectedRoute element={<CommandesPage />} roles={[ 'admin' ]} />} />
               <Route path="/boutique-client" element={<BoutiqueClientPage />} />
+              <Route path="/vehicule-options/:id" element={<VehiculeOptionsPage />} />
               <Route path="/assistant-ia" element={<ProtectedRoute element={<AssistantIA />} roles={[ 'admin', 'mecanicien' ]} />} />
               
               {/* Routes Garage */}

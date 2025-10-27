@@ -14,10 +14,11 @@ import {
   CircularProgress,
   Alert
 } from '@mui/material';
-import { Add, DirectionsCar, Delete } from '@mui/icons-material';
+import { Add, DirectionsCar, Delete, AttachMoney, Visibility } from '@mui/icons-material';
 import { vehiculesAPI } from '../services/api';
 import ModernPageTemplate from '../components/ModernPageTemplate';
 import VehiculeForm from '../components/forms/VehiculeForm';
+import VenteVehiculeForm from '../components/forms/VenteVehiculeForm';
 
 // L'id client provient de l'authentification (localStorage.user.client_id)
 const MesVehiculesPage = () => {
@@ -25,7 +26,10 @@ const MesVehiculesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [showVenteForm, setShowVenteForm] = useState(false);
+  const [selectedVehicule, setSelectedVehicule] = useState(null);
   const [clientId, setClientId] = useState(null);
+  const [vehiculesEnVente, setVehiculesEnVente] = useState([]);
 
   const fetchVehicules = async () => {
     try {
@@ -36,11 +40,32 @@ const MesVehiculesPage = () => {
       }
       const response = await vehiculesAPI.getByClient(clientId);
       setVehicules(response.data || []);
+      
+      // Récupérer aussi les véhicules en vente
+      await fetchVehiculesEnVente();
     } catch (err) {
       console.error('Erreur chargement véhicules client:', err);
       setError("Impossible de charger vos véhicules. "+ (err.message || ''));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchVehiculesEnVente = async () => {
+    try {
+      if (!clientId) return;
+      
+      // Récupérer l'ID utilisateur depuis localStorage
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (!user.id) return;
+      
+      const response = await fetch(`http://localhost:5000/api/vente/vehicules/client/${user.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setVehiculesEnVente(data);
+      }
+    } catch (err) {
+      console.error('Erreur chargement véhicules en vente:', err);
     }
   };
 
@@ -98,6 +123,22 @@ const MesVehiculesPage = () => {
     }
   };
 
+  // Gérer la mise en vente d'un véhicule
+  const handleVendreVehicule = (vehicule) => {
+    setSelectedVehicule(vehicule);
+    setShowVenteForm(true);
+  };
+
+  // Vérifier si un véhicule est en vente
+  const isVehiculeEnVente = (vehiculeId) => {
+    return vehiculesEnVente.some(v => v.vehicule_id === vehiculeId && v.statut === 'en_vente');
+  };
+
+  // Gérer le succès de la vente
+  const handleVenteSuccess = () => {
+    fetchVehicules(); // Recharger les données
+  };
+
   return (
     <ModernPageTemplate
       title="Mes Véhicules"
@@ -143,22 +184,59 @@ const MesVehiculesPage = () => {
                   <TableCell>{v.couleur || ''}</TableCell>
                   <TableCell>{v.annee || ''}</TableCell>
                   <TableCell>
-                    <IconButton 
-                      size="small" 
-                      color="error"
-                      onClick={() => handleDeleteVehicule(v)}
-                      title="Supprimer le véhicule"
-                      sx={{
-                        '&:hover': {
-                          backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                          transform: 'scale(1.1)',
-                          boxShadow: '0 2px 8px rgba(244, 67, 54, 0.3)'
-                        },
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      <Delete />
-                    </IconButton>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      {!isVehiculeEnVente(v.id_vehicule || v.id) ? (
+                        <IconButton 
+                          size="small" 
+                          color="success"
+                          onClick={() => handleVendreVehicule(v)}
+                          title="Mettre en vente"
+                          sx={{
+                            '&:hover': {
+                              backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                              transform: 'scale(1.1)',
+                              boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)'
+                            },
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <AttachMoney />
+                        </IconButton>
+                      ) : (
+                        <IconButton 
+                          size="small" 
+                          color="info"
+                          title="Déjà en vente"
+                          sx={{
+                            '&:hover': {
+                              backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                              transform: 'scale(1.1)',
+                              boxShadow: '0 2px 8px rgba(33, 150, 243, 0.3)'
+                            },
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <Visibility />
+                        </IconButton>
+                      )}
+                      
+                      <IconButton 
+                        size="small" 
+                        color="error"
+                        onClick={() => handleDeleteVehicule(v)}
+                        title="Supprimer le véhicule"
+                        sx={{
+                          '&:hover': {
+                            backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                            transform: 'scale(1.1)',
+                            boxShadow: '0 2px 8px rgba(244, 67, 54, 0.3)'
+                          },
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <Delete />
+                      </IconButton>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
@@ -180,6 +258,13 @@ const MesVehiculesPage = () => {
         onSuccess={fetchVehicules}
         vehicule={null}
         fixedClientId={clientId}
+      />
+
+      <VenteVehiculeForm
+        open={showVenteForm}
+        onClose={() => setShowVenteForm(false)}
+        onSuccess={handleVenteSuccess}
+        vehicule={selectedVehicule}
       />
     </ModernPageTemplate>
   );
