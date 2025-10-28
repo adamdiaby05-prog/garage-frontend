@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Script de build personnalisé pour éviter les erreurs ESLint en CI
 
 # Désactiver le mode CI strict

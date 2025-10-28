@@ -1,6 +1,9 @@
 # Dockerfile pour application complète (Frontend + Backend)
 FROM node:18-alpine
 
+# Installer bash pour le script build.sh
+RUN apk add --no-cache bash
+
 # Définir le répertoire de travail
 WORKDIR /app
 

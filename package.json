@@ -39,7 +39,7 @@
     "dev:server": "node server.js",
     "dev:frontend": "set PORT=3002 && react-scripts start",
     "dev:sequential": "npm run server & timeout 3 && npm run start:windows",
-    "build": "bash build.sh",
+    "build": "CI=false GENERATE_SOURCEMAP=false react-scripts build",
     "build:windows": "set CI=false && react-scripts build",
     "build:linux": "CI=false react-scripts build",
     "test": "react-scripts test",
