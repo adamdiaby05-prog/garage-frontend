@@ -1,5 +1,7 @@
 // Charger les variables d'environnement en premier
-require('dotenv').config({ path: './config.env' });
+require('dotenv').config({ 
+  path: process.env.NODE_ENV === 'production' ? './config.prod.env' : './config.env' 
+});
 
 const express = require('express');
 const mysql = require('mysql2/promise');

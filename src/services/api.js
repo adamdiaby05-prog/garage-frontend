@@ -8,8 +8,10 @@ const resolveApiBaseUrl = () => {
   if (envUrl && envUrl.trim().length > 0) return envUrl.trim();
   if (storedUrl && storedUrl.trim().length > 0) return storedUrl.trim();
   
-  // Utiliser le port 5000 où le serveur tourne actuellement
-  // Ne JAMAIS utiliser le proxy CRA qui cause les erreurs 500
+  // Utiliser l'URL de production ou localhost selon l'environnement
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://garage-backend.your-domain.com/api'; // À remplacer par votre URL backend
+  }
   return 'http://localhost:5000/api';
 };
 

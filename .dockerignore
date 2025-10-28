@@ -6,7 +6,11 @@ README.md
 .env
 .nyc_output
 coverage
+.nyc_output
 .vscode
-.DS_Store
+.idea
 *.log
+uploads
 build
+src
+public
