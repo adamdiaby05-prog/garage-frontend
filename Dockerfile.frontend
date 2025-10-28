@@ -7,8 +7,8 @@ WORKDIR /app
 # Copier les fichiers package
 COPY package*.json ./
 
-# Installer les dépendances
-RUN npm ci
+# Installer TOUTES les dépendances (dev + prod) pour le build
+RUN npm install
 
 # Copier le code source
 COPY . .
@@ -21,9 +21,11 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Installer les dépendances de production
+# Copier les fichiers package
 COPY package*.json ./
-RUN npm ci --only=production
+
+# Installer seulement les dépendances de production
+RUN npm install --omit=dev
 
 # Copier le code source du serveur
 COPY server.js ./
