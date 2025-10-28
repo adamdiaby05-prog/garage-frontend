@@ -12,5 +12,3 @@ coverage
 *.log
 uploads
 build
-src
-public
