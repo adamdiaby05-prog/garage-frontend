@@ -84,6 +84,17 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 // Servir les fichiers statiques du dossier uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// ========== SERVIR L'APPLICATION REACT ==========
+// Servir les fichiers statiques de React en production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'build')));
+  
+  // Route catch-all pour React Router
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+  });
+}
+
 // Route pour télécharger une image directement
 app.get('/api/images/:filename', (req, res) => {
   const { filename } = req.params;

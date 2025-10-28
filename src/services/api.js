@@ -10,7 +10,7 @@ const resolveApiBaseUrl = () => {
   
   // Utiliser l'URL de production ou localhost selon l'environnement
   if (process.env.NODE_ENV === 'production') {
-    return 'https://garage-backend.your-domain.com/api'; // À remplacer par votre URL backend
+    return '/api'; // Utiliser l'API du même serveur en production
   }
   return 'http://localhost:5000/api';
 };
