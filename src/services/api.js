@@ -79,15 +79,6 @@ export const clientsAPI = {
   delete: (id) => api.delete(`/clients/${id}`),
 };
 
-// Services pour les employés
-export const employesAPI = {
-  getAll: () => api.get('/employes'),
-  getMecaniciens: () => api.get('/employes/mecaniciens'),
-  getById: (id) => api.get(`/employes/${id}`),
-  create: (employeData) => api.post('/employes', employeData),
-  update: (id, employeData) => api.put(`/employes/${id}`, employeData),
-  delete: (id) => api.delete(`/employes/${id}`),
-};
 
 // Utilisateurs (admin)
 export const usersAPI = {
@@ -215,6 +206,7 @@ export const garagesAPI = {
 // Services pour les employés
 export const employesAPI = {
   getAll: () => api.get('/employes'),
+  getMecaniciens: () => api.get('/employes/mecaniciens'),
   getById: (id) => api.get(`/employes/${id}`),
   create: (employeData) => api.post('/employes', employeData),
   update: (id, employeData) => api.put(`/employes/${id}`, employeData),
