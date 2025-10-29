@@ -248,6 +248,11 @@ export const testAPI = {
   testConnection: () => api.get('/test'),
 };
 
+// ========== API POUR LES STATISTIQUES ADMIN ==========
+export const adminStatsAPI = {
+  getStats: () => api.get('/admin/stats').then(r => r.data)
+};
+
 // Auth API
 export const authAPI = {
   register: (payload) => api.post('/auth/register', payload),

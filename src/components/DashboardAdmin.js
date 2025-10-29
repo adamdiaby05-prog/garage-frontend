@@ -10,7 +10,9 @@ import {
   Button,
   Fade,
   Avatar,
-  Badge
+  Badge,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import {
   People,
@@ -30,11 +32,25 @@ import {
   CheckCircle,
   Warning
 } from '@mui/icons-material';
+import { adminStatsAPI } from '../services/api';
 
 // Tableau de bord Admin amélioré (sans Drawer/AppBar pour éviter les doublons avec le layout existant)
-const DashboardAdmin = ({ stats }) => {
+const DashboardAdmin = () => {
   const [hoveredCardIndex, setHoveredCardIndex] = useState(null);
   const [pulseMap, setPulseMap] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [stats, setStats] = useState({
+    clients: 0,
+    vehicules: 0,
+    reparations: 0,
+    factures: 0,
+    employes: 0,
+    demandes: 0,
+    rendezVous: 0,
+    revenuTotal: 0,
+    activitesRecentes: []
+  });
   const [animatedStats, setAnimatedStats] = useState({
     clients: 0,
     vehicules: 0,
@@ -42,11 +58,31 @@ const DashboardAdmin = ({ stats }) => {
     factures: 0
   });
 
+  // Charger les statistiques depuis l'API
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const data = await adminStatsAPI.getStats();
+        setStats(data);
+        console.log('📊 Statistiques admin chargées:', data);
+      } catch (err) {
+        console.error('Erreur chargement stats admin:', err);
+        setError('Impossible de charger les statistiques');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
   const resolvedStats = {
-    clients: Number(stats?.clients ?? 247),
-    vehicules: Number(stats?.vehicules ?? 189),
-    reparations: Number(stats?.reparations ?? 56),
-    factures: Number(stats?.factures ?? 142)
+    clients: Number(stats?.clients ?? 0),
+    vehicules: Number(stats?.vehicules ?? 0),
+    reparations: Number(stats?.reparations ?? 0),
+    factures: Number(stats?.factures ?? 0)
   };
 
   // Animation des statistiques (élasticité fluide)
@@ -140,14 +176,83 @@ const DashboardAdmin = ({ stats }) => {
     { title: 'Planning', icon: <Timeline />, gradient: 'linear-gradient(135deg, #dc2626, #ef4444)' }
   ];
 
-  const recentActivities = [
-    { id: 1, action: 'Nouveau client VIP inscrit', time: 'Il y a 2 min', icon: <WorkspacePremium />, color: '#f59e0b' },
-    { id: 2, action: 'Réparation BMW terminée', time: 'Il y a 8 min', icon: <CheckCircle />, color: '#22c55e' },
-    { id: 3, action: 'Facture premium générée', time: 'Il y a 15 min', icon: <AttachMoney />, color: '#84cc16' },
-    { id: 4, action: 'Audi A4 ajoutée', time: 'Il y a 25 min', icon: <DirectionsCar />, color: '#10b981' },
-    { id: 5, action: 'RDV Mercedes confirmé', time: 'Il y a 45 min', icon: <Schedule />, color: '#34d399' },
-    { id: 6, action: 'Alerte maintenance critique', time: 'Il y a 1h', icon: <Warning />, color: '#ef4444' }
-  ];
+  // Fonction pour formater le temps relatif
+  const formatTimeAgo = (dateString) => {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'À l\'instant';
+    if (diffInMinutes < 60) return `Il y a ${diffInMinutes} min`;
+    if (diffInMinutes < 1440) return `Il y a ${Math.floor(diffInMinutes / 60)}h`;
+    return `Il y a ${Math.floor(diffInMinutes / 1440)}j`;
+  };
+
+  // Fonction pour obtenir l'icône selon le type
+  const getActivityIcon = (type) => {
+    switch (type) {
+      case 'client': return <WorkspacePremium />;
+      case 'reparation': return <Build />;
+      case 'facture': return <AttachMoney />;
+      default: return <CheckCircle />;
+    }
+  };
+
+  // Fonction pour obtenir la couleur selon le type
+  const getActivityColor = (type) => {
+    switch (type) {
+      case 'client': return '#f59e0b';
+      case 'reparation': return '#22c55e';
+      case 'facture': return '#84cc16';
+      default: return '#10b981';
+    }
+  };
+
+  // Transformer les activités récentes de l'API
+  const recentActivities = Array.isArray(stats.activitesRecentes) ? stats.activitesRecentes.map((activity, index) => ({
+    id: index + 1,
+    action: activity.description,
+    time: formatTimeAgo(activity.date_creation),
+    icon: getActivityIcon(activity.type),
+    color: getActivityColor(activity.type)
+  })) : [];
+
+  // Affichage de chargement
+  if (loading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 25%, #0f172a 50%, #1e293b 75%, #0a0a0a 100%)'
+      }}>
+        <Box sx={{ textAlign: 'center' }}>
+          <CircularProgress size={60} sx={{ color: '#10b981', mb: 2 }} />
+          <Typography variant="h6" sx={{ color: '#e5e7eb' }}>
+            Chargement des statistiques...
+          </Typography>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Affichage d'erreur
+  if (error) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 25%, #0f172a 50%, #1e293b 75%, #0a0a0a 100%)'
+      }}>
+        <Alert severity="error" sx={{ maxWidth: 500 }}>
+          {error}
+        </Alert>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ position: 'relative', minHeight: '100vh', background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 25%, #0f172a 50%, #1e293b 75%, #0a0a0a 100%)', overflow: 'hidden' }}>

@@ -2569,6 +2569,111 @@ async function startServer() {
     }
   });
 
+  // ========== ROUTES POUR LES STATISTIQUES ADMIN ==========
+  // Récupérer les statistiques du dashboard admin
+  app.get('/api/admin/stats', async (req, res) => {
+    try {
+      // Compter les clients
+      const [clientsResult] = await pool.execute('SELECT COUNT(*) as count FROM clients');
+      const clientsCount = clientsResult[0].count;
+
+      // Compter les véhicules
+      const [vehiculesResult] = await pool.execute('SELECT COUNT(*) as count FROM vehicules');
+      const vehiculesCount = vehiculesResult[0].count;
+
+      // Compter les réparations
+      const [reparationsResult] = await pool.execute('SELECT COUNT(*) as count FROM reparations');
+      const reparationsCount = reparationsResult[0].count;
+
+      // Compter les factures
+      const [facturesResult] = await pool.execute('SELECT COUNT(*) as count FROM factures');
+      const facturesCount = facturesResult[0].count;
+
+      // Compter les employés
+      const [employesResult] = await pool.execute('SELECT COUNT(*) as count FROM employes');
+      const employesCount = employesResult[0].count;
+
+      // Compter les demandes de prestations
+      const [demandesResult] = await pool.execute('SELECT COUNT(*) as count FROM demandes_prestations');
+      const demandesCount = demandesResult[0].count;
+
+      // Compter les rendez-vous
+      const [rendezVousResult] = await pool.execute('SELECT COUNT(*) as count FROM rendez_vous');
+      const rendezVousCount = rendezVousResult[0].count;
+
+      // Calculer le revenu total des factures
+      const [revenuResult] = await pool.execute('SELECT SUM(total_ttc) as total FROM factures WHERE statut = "payee"');
+      const revenuTotal = revenuResult[0].total || 0;
+
+      // Statistiques des réparations par statut
+      const [reparationsStats] = await pool.execute(`
+        SELECT 
+          statut,
+          COUNT(*) as count
+        FROM reparations 
+        GROUP BY statut
+      `);
+
+      // Statistiques des factures par statut
+      const [facturesStats] = await pool.execute(`
+        SELECT 
+          statut,
+          COUNT(*) as count
+        FROM factures 
+        GROUP BY statut
+      `);
+
+      // Activités récentes (dernières 10)
+      const [activitesRecentes] = await pool.execute(`
+        SELECT 
+          'client' as type,
+          CONCAT('Nouveau client: ', c.nom, ' ', c.prenom) as description,
+          c.created_at as date_creation
+        FROM clients c
+        WHERE c.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        
+        UNION ALL
+        
+        SELECT 
+          'reparation' as type,
+          CONCAT('Réparation: ', v.marque, ' ', v.modele) as description,
+          r.created_at as date_creation
+        FROM reparations r
+        LEFT JOIN vehicules v ON r.vehicule_id = v.id
+        WHERE r.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        
+        UNION ALL
+        
+        SELECT 
+          'facture' as type,
+          CONCAT('Facture: ', f.total_ttc, '€') as description,
+          f.created_at as date_creation
+        FROM factures f
+        WHERE f.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        
+        ORDER BY date_creation DESC
+        LIMIT 10
+      `);
+
+      res.json({
+        clients: clientsCount,
+        vehicules: vehiculesCount,
+        reparations: reparationsCount,
+        factures: facturesCount,
+        employes: employesCount,
+        demandes: demandesCount,
+        rendezVous: rendezVousCount,
+        revenuTotal: parseFloat(revenuTotal),
+        reparationsStats: reparationsStats,
+        facturesStats: facturesStats,
+        activitesRecentes: activitesRecentes
+      });
+    } catch (error) {
+      console.error('Erreur récupération stats admin:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
   // ========== SERVIR L'APPLICATION REACT (APRÈS TOUTES LES ROUTES API) ==========
   if (process.env.NODE_ENV === 'production') {
     console.log('🌐 Configuration des fichiers statiques React...');
