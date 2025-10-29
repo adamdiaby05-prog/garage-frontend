@@ -59,13 +59,23 @@ const MesVehiculesPage = () => {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       if (!user.id) return;
       
-      const response = await fetch(`http://localhost:5000/api/vente/vehicules/client/${user.id}`);
+      // Utiliser l'API configurée au lieu d'une URL hardcodée
+      const baseURL = process.env.NODE_ENV === 'production' 
+        ? 'https://garageci.geodaftar.com/api' 
+        : 'http://localhost:5000/api';
+      
+      const response = await fetch(`${baseURL}/vente/vehicules/client/${user.id}`);
       if (response.ok) {
         const data = await response.json();
-        setVehiculesEnVente(data);
+        // S'assurer que data est un tableau
+        setVehiculesEnVente(Array.isArray(data) ? data : []);
+      } else {
+        console.warn('Erreur API véhicules en vente:', response.status);
+        setVehiculesEnVente([]);
       }
     } catch (err) {
       console.error('Erreur chargement véhicules en vente:', err);
+      setVehiculesEnVente([]);
     }
   };
 
@@ -112,7 +122,7 @@ const MesVehiculesPage = () => {
         
         // Mise à jour de l'état local
         setVehicules(prevVehicules => 
-          prevVehicules.filter(v => (v.id_vehicule || v.id) !== vehiculeId)
+          Array.isArray(prevVehicules) ? prevVehicules.filter(v => (v.id_vehicule || v.id) !== vehiculeId) : []
         );
         
         alert(`Véhicule ${vehicule.marque} ${vehicule.modele} supprimé avec succès`);
@@ -148,9 +158,9 @@ const MesVehiculesPage = () => {
       onAdd={() => setShowForm(true)}
       onRefresh={fetchVehicules}
       statCards={[
-        { title: 'Total', value: vehicules.length, icon: <DirectionsCar />, gradient: 'linear-gradient(135deg, #7c2d12, #ea580c)' },
-        { title: 'Essence', value: vehicules.filter(v => (v.carburant||'').toLowerCase()==='essence').length, icon: <DirectionsCar />, gradient: 'linear-gradient(135deg, #c2410c, #f59e0b)' },
-        { title: 'Diesel', value: vehicules.filter(v => (v.carburant||'').toLowerCase()==='diesel').length, icon: <DirectionsCar />, gradient: 'linear-gradient(135deg, #d97706, #fbbf24)' }
+        { title: 'Total', value: Array.isArray(vehicules) ? vehicules.length : 0, icon: <DirectionsCar />, gradient: 'linear-gradient(135deg, #7c2d12, #ea580c)' },
+        { title: 'Essence', value: Array.isArray(vehicules) ? vehicules.filter(v => (v.carburant||'').toLowerCase()==='essence').length : 0, icon: <DirectionsCar />, gradient: 'linear-gradient(135deg, #c2410c, #f59e0b)' },
+        { title: 'Diesel', value: Array.isArray(vehicules) ? vehicules.filter(v => (v.carburant||'').toLowerCase()==='diesel').length : 0, icon: <DirectionsCar />, gradient: 'linear-gradient(135deg, #d97706, #fbbf24)' }
       ]}
     >
 
