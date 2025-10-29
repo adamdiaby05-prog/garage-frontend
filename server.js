@@ -349,7 +349,16 @@ const dbConfig = {
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'garage_db',
-  port: process.env.DB_PORT || 3306
+  port: process.env.DB_PORT || 3306,
+  // Configuration pour éviter les timeouts
+  acquireTimeout: 60000,
+  timeout: 60000,
+  reconnect: true,
+  idleTimeout: 300000,
+  connectionLimit: 10,
+  queueLimit: 0,
+  // Configuration SSL si nécessaire
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 };
 
 let pool;
@@ -358,6 +367,14 @@ async function initializeDatabase() {
   try {
     console.log('🔄 Tentative de connexion à la base de données...');
     console.log(`📍 Configuration: ${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`);
+    console.log('🔧 Config détaillée:', {
+      host: dbConfig.host,
+      port: dbConfig.port,
+      database: dbConfig.database,
+      user: dbConfig.user,
+      acquireTimeout: dbConfig.acquireTimeout,
+      timeout: dbConfig.timeout
+    });
     
     pool = mysql.createPool({
       ...dbConfig,
@@ -368,6 +385,11 @@ async function initializeDatabase() {
     
     const connection = await pool.getConnection();
     console.log('✅ Connexion à la base de données établie avec succès');
+    
+    // Test d'une requête simple
+    const [rows] = await connection.execute('SELECT 1 as test');
+    console.log('✅ Test de requête réussi:', rows);
+    
     connection.release();
     
   } catch (error) {
@@ -544,8 +566,27 @@ app.post('/api/auth/register', async (req, res) => {
       userType: userType
     });
   } catch (error) {
-    console.error('Erreur inscription:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error('❌ Erreur inscription détaillée:', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage,
+      stack: error.stack
+    });
+    
+    // Gestion spécifique des erreurs MySQL
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ error: 'Cet email est déjà utilisé' });
+    }
+    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+      return res.status(500).json({ error: 'Erreur de connexion à la base de données' });
+    }
+    
+    res.status(500).json({ 
+      error: 'Erreur serveur', 
+      details: process.env.NODE_ENV === 'development' ? error.message : 'Erreur interne'
+    });
   }
 });
 
