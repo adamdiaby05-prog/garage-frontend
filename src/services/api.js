@@ -32,7 +32,14 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('Erreur API:', error);
+    // Log sécurisé de l'erreur
+    console.error('Erreur API:', {
+      message: error.message || 'Erreur inconnue',
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      code: error.code,
+      url: error.config?.url
+    });
     
     // Améliorer les messages d'erreur
     if (error.code === 'ECONNREFUSED') {
@@ -43,10 +50,11 @@ api.interceptors.response.use(
       console.error('⏰ Délai d\'attente dépassé. Le serveur met trop de temps à répondre.');
     } else if (error.response?.status === 500) {
       console.error('💥 Erreur serveur interne. Vérifiez les logs du serveur.');
+    } else if (error.response?.status === 404) {
+      console.error('🔍 Endpoint non trouvé. Vérifiez l\'URL de l\'API.');
+    } else if (error.response?.status === 400) {
+      console.error('📝 Requête invalide. Vérifiez les données envoyées.');
     }
-
-    // Pas de retry automatique - on force l'utilisation du port 5000
-    console.warn('⚠️ Erreur API - Vérifiez que le serveur backend tourne sur le port 5000');
 
     return Promise.reject(error);
   }
@@ -204,15 +212,15 @@ export const garagesAPI = {
 
 // Services pour les demandes de prestations
 export const demandesPrestationsAPI = {
-  getAll: () => api.get('/demandes-prestations').then((r) => r.data),
-  getById: (id) => api.get(`/demandes-prestations/${id}`).then((r) => r.data),
-  getByClient: (clientId) => api.get(`/demandes-prestations?client_id=${clientId}`).then((r) => r.data),
+  getAll: () => api.get('/prestations/demandes').then((r) => r.data),
+  getById: (id) => api.get(`/prestations/demandes/${id}`).then((r) => r.data),
+  getByClient: (clientId) => api.get(`/prestations/demandes/client/${clientId}`).then((r) => r.data),
   getByGarage: (garageId) => api.get(`/garages/${garageId}/demandes`).then((r) => r.data),
-  create: (demandeData) => api.post('/demandes-prestations', demandeData).then((r) => r.data),
-  update: (id, demandeData) => api.put(`/demandes-prestations/${id}`, demandeData).then((r) => r.data),
-  delete: (id) => api.delete(`/demandes-prestations/${id}`).then((r) => r.data),
-  accept: (id, acceptData) => api.patch(`/demandes-prestations/${id}/accept`, acceptData).then((r) => r.data),
-  updateStatut: (id, statutData) => api.patch(`/demandes-prestations/${id}/statut`, statutData).then((r) => r.data),
+  create: (demandeData) => api.post('/prestations/demandes', demandeData).then((r) => r.data),
+  update: (id, demandeData) => api.put(`/prestations/demandes/${id}`, demandeData).then((r) => r.data),
+  delete: (id) => api.delete(`/prestations/demandes/${id}`).then((r) => r.data),
+  accept: (id, acceptData) => api.patch(`/prestations/demandes/${id}/accept`, acceptData).then((r) => r.data),
+  updateStatut: (id, statutData) => api.patch(`/prestations/demandes/${id}/statut`, statutData).then((r) => r.data),
 };
 
 // Services pour le tableau de bord

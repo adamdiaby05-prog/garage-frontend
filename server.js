@@ -2020,9 +2020,9 @@ app.post('/api/prestations/demandes', async (req, res) => {
     
     const [result] = await pool.execute(`
       INSERT INTO demandes_prestations 
-      (client_id, service_id, vehicule_id, description, date_souhaitee, adresse, telephone, statut, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'en_attente', NOW())
-    `, [client_id, service_id, vehicule_id, description || '', date_souhaitee, adresse || '', telephone || '']);
+      (client_id, service_id, vehicule_id, description_probleme, date_souhaitee, statut, date_demande)
+      VALUES (?, ?, ?, ?, ?, 'en_attente', NOW())
+    `, [client_id, service_id, vehicule_id, description || '', date_souhaitee]);
     
     res.json({
       success: true,
