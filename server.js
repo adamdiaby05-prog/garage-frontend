@@ -1779,6 +1779,48 @@ app.get('/api/services', async (req, res) => {
   }
 });
 
+// Route pour récupérer les véhicules (avec support client_id)
+app.get('/api/vehicules', async (req, res) => {
+  try {
+    const { client_id, employe_id } = req.query;
+    
+    let query = `
+      SELECT 
+        id,
+        id_vehicule,
+        marque,
+        modele,
+        immatriculation as numero_immatriculation,
+        annee,
+        kilometrage,
+        carburant,
+        couleur,
+        created_at
+      FROM vehicules
+      WHERE 1=1
+    `;
+    const params = [];
+    
+    if (client_id) {
+      query += ' AND client_id = ?';
+      params.push(client_id);
+    }
+    
+    if (employe_id) {
+      query += ' AND employe_id = ?';
+      params.push(employe_id);
+    }
+    
+    query += ' ORDER BY created_at DESC';
+    
+    const [rows] = await pool.execute(query, params);
+    res.json(rows);
+  } catch (error) {
+    console.error('Erreur récupération véhicules:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // Route pour les véhicules d'un client
 app.get('/api/client/vehicules', async (req, res) => {
   try {

@@ -39,13 +39,16 @@ const MesVehiculesPage = () => {
         throw new Error("Aucun client_id trouvé. Connectez-vous en tant que client.");
       }
       const response = await vehiculesAPI.getByClient(clientId);
-      setVehicules(response.data || []);
+      // S'assurer que response.data est un tableau
+      const vehiculesData = response?.data || [];
+      setVehicules(Array.isArray(vehiculesData) ? vehiculesData : []);
       
       // Récupérer aussi les véhicules en vente
       await fetchVehiculesEnVente();
     } catch (err) {
       console.error('Erreur chargement véhicules client:', err);
       setError("Impossible de charger vos véhicules. "+ (err.message || ''));
+      setVehicules([]); // S'assurer que vehicules reste un tableau vide en cas d'erreur
     } finally {
       setLoading(false);
     }
@@ -141,6 +144,7 @@ const MesVehiculesPage = () => {
 
   // Vérifier si un véhicule est en vente
   const isVehiculeEnVente = (vehiculeId) => {
+    if (!Array.isArray(vehiculesEnVente)) return false;
     return vehiculesEnVente.some(v => v.vehicule_id === vehiculeId && v.statut === 'en_vente');
   };
 
@@ -185,72 +189,73 @@ const MesVehiculesPage = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {vehicules.map((v, idx) => (
-                <TableRow key={v.id_vehicule || v.id || `vehicule-${idx}`} hover>
-                  <TableCell>{v.marque || ''}</TableCell>
-                  <TableCell>{v.modele || ''}</TableCell>
-                  <TableCell>{v.numero_immatriculation || ''}</TableCell>
-                  <TableCell>{v.carburant || ''}</TableCell>
-                  <TableCell>{v.couleur || ''}</TableCell>
-                  <TableCell>{v.annee || ''}</TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      {!isVehiculeEnVente(v.id_vehicule || v.id) ? (
+              {Array.isArray(vehicules) && vehicules.length > 0 ? (
+                vehicules.map((v, idx) => (
+                  <TableRow key={v.id_vehicule || v.id || `vehicule-${idx}`} hover>
+                    <TableCell>{v.marque || ''}</TableCell>
+                    <TableCell>{v.modele || ''}</TableCell>
+                    <TableCell>{v.numero_immatriculation || ''}</TableCell>
+                    <TableCell>{v.carburant || ''}</TableCell>
+                    <TableCell>{v.couleur || ''}</TableCell>
+                    <TableCell>{v.annee || ''}</TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        {!isVehiculeEnVente(v.id_vehicule || v.id) ? (
+                          <IconButton 
+                            size="small" 
+                            color="success"
+                            onClick={() => handleVendreVehicule(v)}
+                            title="Mettre en vente"
+                            sx={{
+                              '&:hover': {
+                                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                                transform: 'scale(1.1)',
+                                boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)'
+                              },
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <AttachMoney />
+                          </IconButton>
+                        ) : (
+                          <IconButton 
+                            size="small" 
+                            color="info"
+                            title="Déjà en vente"
+                            sx={{
+                              '&:hover': {
+                                backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                                transform: 'scale(1.1)',
+                                boxShadow: '0 2px 8px rgba(33, 150, 243, 0.3)'
+                              },
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <Visibility />
+                          </IconButton>
+                        )}
+                        
                         <IconButton 
                           size="small" 
-                          color="success"
-                          onClick={() => handleVendreVehicule(v)}
-                          title="Mettre en vente"
+                          color="error"
+                          onClick={() => handleDeleteVehicule(v)}
+                          title="Supprimer le véhicule"
                           sx={{
                             '&:hover': {
-                              backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                              backgroundColor: 'rgba(244, 67, 54, 0.1)',
                               transform: 'scale(1.1)',
-                              boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)'
+                              boxShadow: '0 2px 8px rgba(244, 67, 54, 0.3)'
                             },
                             transition: 'all 0.2s ease'
                           }}
                         >
-                          <AttachMoney />
+                          <Delete />
                         </IconButton>
-                      ) : (
-                        <IconButton 
-                          size="small" 
-                          color="info"
-                          title="Déjà en vente"
-                          sx={{
-                            '&:hover': {
-                              backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                              transform: 'scale(1.1)',
-                              boxShadow: '0 2px 8px rgba(33, 150, 243, 0.3)'
-                            },
-                            transition: 'all 0.2s ease'
-                          }}
-                        >
-                          <Visibility />
-                        </IconButton>
-                      )}
-                      
-                      <IconButton 
-                        size="small" 
-                        color="error"
-                        onClick={() => handleDeleteVehicule(v)}
-                        title="Supprimer le véhicule"
-                        sx={{
-                          '&:hover': {
-                            backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                            transform: 'scale(1.1)',
-                            boxShadow: '0 2px 8px rgba(244, 67, 54, 0.3)'
-                          },
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        <Delete />
-                      </IconButton>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {vehicules.length === 0 && (
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
                 <TableRow>
                   <TableCell colSpan={7} align="center">
                     Aucun véhicule trouvé. Cliquez sur "Nouvelle voiture" pour ajouter votre premier véhicule.
