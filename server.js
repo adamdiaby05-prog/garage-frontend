@@ -1787,7 +1787,6 @@ app.get('/api/vehicules', async (req, res) => {
     let query = `
       SELECT 
         id,
-        id_vehicule,
         marque,
         modele,
         immatriculation as numero_immatriculation,

@@ -105,7 +105,7 @@ const MesVehiculesPage = () => {
 
   // Gérer la suppression d'un véhicule
   const handleDeleteVehicule = async (vehicule) => {
-    const vehiculeId = vehicule.id_vehicule || vehicule.id;
+    const vehiculeId = vehicule.id;
     
     if (!vehiculeId) {
       alert('Erreur: ID du véhicule non trouvé');
@@ -125,7 +125,7 @@ const MesVehiculesPage = () => {
         
         // Mise à jour de l'état local
         setVehicules(prevVehicules => 
-          Array.isArray(prevVehicules) ? prevVehicules.filter(v => (v.id_vehicule || v.id) !== vehiculeId) : []
+          Array.isArray(prevVehicules) ? prevVehicules.filter(v => v.id !== vehiculeId) : []
         );
         
         alert(`Véhicule ${vehicule.marque} ${vehicule.modele} supprimé avec succès`);
@@ -191,7 +191,7 @@ const MesVehiculesPage = () => {
             <TableBody>
               {Array.isArray(vehicules) && vehicules.length > 0 ? (
                 vehicules.map((v, idx) => (
-                  <TableRow key={v.id_vehicule || v.id || `vehicule-${idx}`} hover>
+                  <TableRow key={v.id || `vehicule-${idx}`} hover>
                     <TableCell>{v.marque || ''}</TableCell>
                     <TableCell>{v.modele || ''}</TableCell>
                     <TableCell>{v.numero_immatriculation || ''}</TableCell>
@@ -200,7 +200,7 @@ const MesVehiculesPage = () => {
                     <TableCell>{v.annee || ''}</TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 1 }}>
-                        {!isVehiculeEnVente(v.id_vehicule || v.id) ? (
+                        {!isVehiculeEnVente(v.id) ? (
                           <IconButton 
                             size="small" 
                             color="success"
