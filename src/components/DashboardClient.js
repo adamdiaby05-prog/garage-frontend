@@ -49,9 +49,11 @@ const DashboardClient = ({ stats }) => {
   const fetchClientVehicules = async () => {
     try {
       const response = await vehiculesAPI.getClientVehicules();
-      setClientVehicules(response.data);
+      console.log('🚗 Véhicules reçus:', response);
+      setClientVehicules(Array.isArray(response) ? response : []);
     } catch (error) {
       console.error('Erreur récupération véhicules client:', error);
+      setClientVehicules([]);
     }
   };
 
@@ -59,13 +61,16 @@ const DashboardClient = ({ stats }) => {
   const fetchClientReparations = async () => {
     try {
       const response = await reparationsAPI.getClientReparations();
-      setClientReparations(response.data);
+      console.log('🔧 Réparations reçues:', response);
+      setClientReparations(Array.isArray(response) ? response : []);
       
       // Compter les réparations terminées
-      const finished = response.data.filter(r => r.statut === 'terminée').length;
+      const finished = Array.isArray(response) ? response.filter(r => r.statut === 'terminée').length : 0;
       setFinishedCount(finished);
     } catch (error) {
       console.error('Erreur récupération réparations client:', error);
+      setClientReparations([]);
+      setFinishedCount(0);
     }
   };
 
@@ -73,9 +78,11 @@ const DashboardClient = ({ stats }) => {
   const fetchClientFactures = async () => {
     try {
       const response = await facturesAPI.getClientFactures();
-      setClientFactures(response.data);
+      console.log('🧾 Factures reçues:', response);
+      setClientFactures(Array.isArray(response) ? response : []);
     } catch (error) {
       console.error('Erreur récupération factures client:', error);
+      setClientFactures([]);
     }
   };
 
@@ -83,9 +90,11 @@ const DashboardClient = ({ stats }) => {
   const fetchClientRendezVous = async () => {
     try {
       const response = await rendezVousAPI.getClientRendezVous();
-      setClientRendezVous(response.data);
+      console.log('📅 Rendez-vous reçus:', response);
+      setClientRendezVous(Array.isArray(response) ? response : []);
     } catch (error) {
       console.error('Erreur récupération rendez-vous client:', error);
+      setClientRendezVous([]);
     }
   };
 

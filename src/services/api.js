@@ -106,7 +106,9 @@ export const vehiculesAPI = {
       console.error('Aucun utilisateur connecté');
       return Promise.reject(new Error('Utilisateur non connecté'));
     }
-    return api.get(`/client/vehicules?user_id=${user.id}`).then((r) => r.data);
+    return api.get(`/client/vehicules`, {
+      headers: { 'user-id': user.id }
+    }).then((r) => r.data);
   },
   getMecanicienVehicules: () => api.get('/mecanicien/vehicules'),
   create: (vehiculeData) => api.post('/vehicules', vehiculeData),
