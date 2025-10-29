@@ -59,15 +59,42 @@ const allowedOrigins = new Set([
   'http://localhost:3000',
   'http://localhost:3002',
   'http://localhost:3003',
+  'https://garageci.geodaftar.com',
+  'https://garage-frontend-teovym.dokploy.com',
   process.env.FRONTEND_ORIGIN || ''
 ].filter(Boolean));
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.has(origin)) return callback(null, true);
+    console.log('🌐 CORS Origin reçue:', origin);
+    
+    // Autoriser les requêtes sans origin (mobile apps, Postman, etc.)
+    if (!origin) {
+      console.log('✅ CORS: Requête sans origin autorisée');
+      return callback(null, true);
+    }
+    
+    // Vérifier si l'origine est dans la liste autorisée
+    if (allowedOrigins.has(origin)) {
+      console.log('✅ CORS: Origin autorisée:', origin);
+      return callback(null, true);
+    }
+    
+    // Autoriser les domaines Vercel
     const isVercel = /\.vercel\.app$/i.test(new URL(origin).hostname || '');
-    if (isVercel) return callback(null, true);
+    if (isVercel) {
+      console.log('✅ CORS: Vercel domain autorisé:', origin);
+      return callback(null, true);
+    }
+    
+    // Autoriser les domaines Dokploy
+    const isDokploy = /\.dokploy\.com$/i.test(new URL(origin).hostname || '');
+    if (isDokploy) {
+      console.log('✅ CORS: Dokploy domain autorisé:', origin);
+      return callback(null, true);
+    }
+    
+    console.log('❌ CORS: Origin refusée:', origin);
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
@@ -350,13 +377,6 @@ const dbConfig = {
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'garage_db',
   port: process.env.DB_PORT || 3306,
-  // Configuration pour éviter les timeouts
-  acquireTimeout: 60000,
-  timeout: 60000,
-  reconnect: true,
-  idleTimeout: 300000,
-  connectionLimit: 10,
-  queueLimit: 0,
   // Configuration SSL si nécessaire
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 };
