@@ -123,6 +123,12 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // ========== SERVIR L'APPLICATION REACT ==========
 // Cette section sera déplacée à la fin du fichier, après toutes les routes API
 
+// Servir les fichiers statiques en développement
+if (process.env.NODE_ENV !== 'production') {
+  app.use(express.static(path.join(__dirname, 'public')));
+  app.use(express.static(path.join(__dirname, 'src')));
+}
+
 // Route pour télécharger une image directement
 app.get('/api/images/:filename', (req, res) => {
   const { filename } = req.params;
