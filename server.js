@@ -2674,6 +2674,137 @@ async function startServer() {
     }
   });
 
+  // ========== ROUTES POUR LES PIÈCES ==========
+  // Récupérer toutes les pièces
+  app.get('/api/pieces', async (req, res) => {
+    try {
+      const [rows] = await pool.execute(`
+        SELECT 
+          p.id,
+          p.nom as nom_piece,
+          p.reference as numero_reference,
+          p.categorie,
+          p.prix_vente as prix,
+          p.stock_actuel as stock,
+          p.stock_minimum,
+          p.fournisseur,
+          p.image_url,
+          p.created_at
+        FROM pieces p
+        ORDER BY p.created_at DESC
+      `);
+      
+      res.json(rows);
+    } catch (error) {
+      console.error('Erreur récupération pièces:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Récupérer une pièce par ID
+  app.get('/api/pieces/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [rows] = await pool.execute(`
+        SELECT 
+          p.id,
+          p.nom as nom_piece,
+          p.reference as numero_reference,
+          p.categorie,
+          p.prix_vente as prix,
+          p.stock_actuel as stock,
+          p.stock_minimum,
+          p.fournisseur,
+          p.image_url,
+          p.created_at
+        FROM pieces p
+        WHERE p.id = ?
+      `, [id]);
+      
+      if (rows.length === 0) {
+        return res.status(404).json({ error: 'Pièce non trouvée' });
+      }
+      
+      res.json(rows[0]);
+    } catch (error) {
+      console.error('Erreur récupération pièce:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Créer une nouvelle pièce
+  app.post('/api/pieces', async (req, res) => {
+    try {
+      const { nom_piece, description, categorie, prix, stock, stock_minimum, fournisseur, numero_reference } = req.body;
+      
+      if (!nom_piece || !categorie || !prix) {
+        return res.status(400).json({ error: 'Nom, catégorie et prix sont requis' });
+      }
+      
+      const [result] = await pool.execute(`
+        INSERT INTO pieces (nom_piece, description, categorie, prix, stock, stock_minimum, fournisseur, numero_reference, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+      `, [nom_piece, description || '', categorie, prix, stock || 0, stock_minimum || 0, fournisseur || '', numero_reference || '']);
+      
+      res.status(201).json({
+        success: true,
+        message: 'Pièce créée avec succès',
+        id: result.insertId
+      });
+    } catch (error) {
+      console.error('Erreur création pièce:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Mettre à jour une pièce
+  app.put('/api/pieces/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { nom_piece, description, categorie, prix, stock, stock_minimum, fournisseur, numero_reference } = req.body;
+      
+      const [result] = await pool.execute(`
+        UPDATE pieces 
+        SET nom_piece = ?, description = ?, categorie = ?, prix = ?, stock = ?, stock_minimum = ?, fournisseur = ?, numero_reference = ?, updated_at = NOW()
+        WHERE id = ?
+      `, [nom_piece, description, categorie, prix, stock, stock_minimum, fournisseur, numero_reference, id]);
+      
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Pièce non trouvée' });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Pièce mise à jour avec succès'
+      });
+    } catch (error) {
+      console.error('Erreur mise à jour pièce:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Supprimer une pièce
+  app.delete('/api/pieces/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [result] = await pool.execute('DELETE FROM pieces WHERE id = ?', [id]);
+      
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Pièce non trouvée' });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Pièce supprimée avec succès'
+      });
+    } catch (error) {
+      console.error('Erreur suppression pièce:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
   // ========== SERVIR L'APPLICATION REACT (APRÈS TOUTES LES ROUTES API) ==========
   if (process.env.NODE_ENV === 'production') {
     console.log('🌐 Configuration des fichiers statiques React...');
