@@ -107,20 +107,21 @@ app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
+// ========== ROUTE DE TEST ==========
+app.get('/api/test', (req, res) => {
+  res.json({ 
+    message: 'API fonctionne correctement', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
 // ========== ROUTES POUR SERVIR LES IMAGES ==========
 // Servir les fichiers statiques du dossier uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ========== SERVIR L'APPLICATION REACT ==========
-// Servir les fichiers statiques de React en production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'build')));
-  
-  // Route catch-all pour React Router
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'build', 'index.html'));
-  });
-}
+// Cette section sera déplacée à la fin du fichier, après toutes les routes API
 
 // Route pour télécharger une image directement
 app.get('/api/images/:filename', (req, res) => {
@@ -1893,11 +1894,28 @@ async function startServer() {
     console.log('📁 Dossier uploads/images créé');
   }
   
+  // ========== SERVIR L'APPLICATION REACT (APRÈS TOUTES LES ROUTES API) ==========
+  if (process.env.NODE_ENV === 'production') {
+    console.log('🌐 Configuration des fichiers statiques React...');
+    
+    // Servir les fichiers statiques de React
+    app.use(express.static(path.join(__dirname, 'build')));
+    
+    // Route catch-all pour React Router (doit être la dernière route)
+    app.get('*', (req, res) => {
+      console.log('🔄 Requête catch-all pour:', req.path);
+      res.sendFile(path.join(__dirname, 'build', 'index.html'));
+    });
+  }
+  
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Serveur démarré sur le port ${PORT}`);
     console.log(`📊 API disponible sur http://localhost:${PORT}/api`);
     console.log(`🖼️  Images disponibles sur http://localhost:${PORT}/uploads/images/`);
     console.log(`🌐 Accès LAN: http://0.0.0.0:${PORT}/api`);
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`🌐 Application React disponible sur http://0.0.0.0:${PORT}`);
+    }
   });
 }
 
