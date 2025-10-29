@@ -166,17 +166,20 @@ const EmployesPage = () => {
   const fetchEmployes = async () => {
     try {
       setLoading(true);
-      // Charger depuis la table utilisateurs et mapper au format d'affichage
-      const respUsers = await usersAPI.getAll();
-      const users = Array.isArray(respUsers.data) ? respUsers.data : [];
-      const mapped = users.map(u => ({
-        id: u.id,
-        nom: u.nom || '',
-        prenom: u.prenom || '',
-        email: u.email || '',
-        telephone: u.telephone || '',
-        poste: u.role || 'utilisateur',
-        actif: true
+      // Charger depuis la table employés
+      const response = await employesAPI.getAll();
+      console.log('Employés reçus:', response);
+      const employesData = Array.isArray(response) ? response : [];
+      const mapped = employesData.map(e => ({
+        id: e.id_employe || e.id,
+        nom: e.nom || '',
+        prenom: e.prenom || '',
+        email: e.email || '',
+        telephone: e.telephone || '',
+        poste: e.specialite || e.role || 'employé',
+        actif: e.statut === 'actif',
+        salaire: e.salaire || 0,
+        date_embauche: e.date_embauche || null
       }));
       setEmployes(mapped);
       setError(null);
