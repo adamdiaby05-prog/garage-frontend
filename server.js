@@ -1820,6 +1820,133 @@ app.get('/api/vehicules', async (req, res) => {
   }
 });
 
+// Route pour créer un véhicule client
+app.post('/api/vehicules', async (req, res) => {
+  try {
+    const { client_id, marque, modele, immatriculation, annee, kilometrage, carburant, couleur } = req.body;
+    
+    // Validation des champs obligatoires
+    if (!client_id || !marque || !modele || !immatriculation) {
+      return res.status(400).json({ error: 'Champs obligatoires manquants: client_id, marque, modele, immatriculation' });
+    }
+    
+    // Vérifier que le client existe
+    const [clientRows] = await pool.execute('SELECT id FROM clients WHERE id = ?', [client_id]);
+    if (clientRows.length === 0) {
+      return res.status(404).json({ error: 'Client non trouvé' });
+    }
+    
+    // Normaliser le carburant (mettre en minuscule pour correspondre à l'enum)
+    const carburantNormalized = carburant ? carburant.toLowerCase() : 'essence';
+    const validCarburants = ['essence', 'diesel', 'hybride', 'electrique'];
+    const finalCarburant = validCarburants.includes(carburantNormalized) ? carburantNormalized : 'essence';
+    
+    // Insérer le véhicule
+    const [result] = await pool.execute(
+      `INSERT INTO vehicules (client_id, marque, modele, immatriculation, annee, kilometrage, carburant, couleur)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        client_id,
+        marque,
+        modele,
+        immatriculation,
+        annee || null,
+        kilometrage || 0,
+        finalCarburant,
+        couleur || null
+      ]
+    );
+    
+    // Récupérer le véhicule créé
+    const [vehiculeRows] = await pool.execute(
+      `SELECT id, marque, modele, immatriculation as numero_immatriculation, annee, kilometrage, carburant, couleur, created_at
+       FROM vehicules WHERE id = ?`,
+      [result.insertId]
+    );
+    
+    res.status(201).json(vehiculeRows[0]);
+  } catch (error) {
+    console.error('Erreur création véhicule:', error);
+    res.status(500).json({ error: 'Erreur serveur lors de la création du véhicule' });
+  }
+});
+
+// Route pour mettre à jour un véhicule
+app.put('/api/vehicules/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { marque, modele, immatriculation, annee, kilometrage, carburant, couleur } = req.body;
+    
+    // Vérifier que le véhicule existe
+    const [existingRows] = await pool.execute('SELECT id FROM vehicules WHERE id = ?', [id]);
+    if (existingRows.length === 0) {
+      return res.status(404).json({ error: 'Véhicule non trouvé' });
+    }
+    
+    // Normaliser le carburant si fourni
+    const carburantNormalized = carburant ? carburant.toLowerCase() : null;
+    const validCarburants = ['essence', 'diesel', 'hybride', 'electrique'];
+    const finalCarburant = carburantNormalized && validCarburants.includes(carburantNormalized) 
+      ? carburantNormalized 
+      : null;
+    
+    // Construire la requête de mise à jour dynamiquement
+    const updates = [];
+    const params = [];
+    
+    if (marque) { updates.push('marque = ?'); params.push(marque); }
+    if (modele) { updates.push('modele = ?'); params.push(modele); }
+    if (immatriculation) { updates.push('immatriculation = ?'); params.push(immatriculation); }
+    if (annee !== undefined) { updates.push('annee = ?'); params.push(annee || null); }
+    if (kilometrage !== undefined) { updates.push('kilometrage = ?'); params.push(kilometrage || 0); }
+    if (finalCarburant) { updates.push('carburant = ?'); params.push(finalCarburant); }
+    if (couleur !== undefined) { updates.push('couleur = ?'); params.push(couleur || null); }
+    
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'Aucun champ à mettre à jour' });
+    }
+    
+    params.push(id);
+    await pool.execute(
+      `UPDATE vehicules SET ${updates.join(', ')} WHERE id = ?`,
+      params
+    );
+    
+    // Récupérer le véhicule mis à jour
+    const [vehiculeRows] = await pool.execute(
+      `SELECT id, marque, modele, immatriculation as numero_immatriculation, annee, kilometrage, carburant, couleur, created_at
+       FROM vehicules WHERE id = ?`,
+      [id]
+    );
+    
+    res.json(vehiculeRows[0]);
+  } catch (error) {
+    console.error('Erreur mise à jour véhicule:', error);
+    res.status(500).json({ error: 'Erreur serveur lors de la mise à jour du véhicule' });
+  }
+});
+
+// Route pour supprimer un véhicule
+app.delete('/api/vehicules/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Vérifier que le véhicule existe
+    const [existingRows] = await pool.execute('SELECT id FROM vehicules WHERE id = ?', [id]);
+    if (existingRows.length === 0) {
+      return res.status(404).json({ error: 'Véhicule non trouvé' });
+    }
+    
+    // Supprimer le véhicule
+    await pool.execute('DELETE FROM vehicules WHERE id = ?', [id]);
+    
+    res.json({ message: 'Véhicule supprimé avec succès' });
+  } catch (error) {
+    console.error('Erreur suppression véhicule:', error);
+    res.status(500).json({ error: 'Erreur serveur lors de la suppression du véhicule' });
+  }
+});
+
 // Route pour les véhicules d'un client
 app.get('/api/client/vehicules', async (req, res) => {
   try {

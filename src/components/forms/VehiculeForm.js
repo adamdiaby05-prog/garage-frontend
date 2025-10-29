@@ -18,8 +18,9 @@ import {
 } from '@mui/material';
 import { AddAPhoto, Image } from '@mui/icons-material';
 import { vehiculesAPI } from '../../services/vehiculesAPI';
+import { vehiculesAPI as clientVehiculesAPI } from '../../services/api';
 
-const VehiculeForm = ({ open, onClose, onSuccess, vehicule = null }) => {
+const VehiculeForm = ({ open, onClose, onSuccess, vehicule = null, fixedClientId = null }) => {
   const [formData, setFormData] = useState({
     marque: '',
     modele: '',
@@ -34,7 +35,8 @@ const VehiculeForm = ({ open, onClose, onSuccess, vehicule = null }) => {
     description: '',
     image_principale: '',
     statut: 'disponible',
-    type_vente: 'vente_et_location'
+    type_vente: 'vente_et_location',
+    immatriculation: ''
   });
 
   const [errors, setErrors] = useState({});
@@ -75,7 +77,8 @@ const VehiculeForm = ({ open, onClose, onSuccess, vehicule = null }) => {
         description: vehicule.description || '',
         image_principale: vehicule.image_principale || '',
         statut: vehicule.statut || 'disponible',
-        type_vente: vehicule.type_vente || 'vente_et_location'
+        type_vente: vehicule.type_vente || 'vente_et_location',
+        immatriculation: vehicule.immatriculation || vehicule.numero_immatriculation || ''
       });
       setImagePreview(vehicule.image_principale || '');
     } else {
@@ -94,7 +97,8 @@ const VehiculeForm = ({ open, onClose, onSuccess, vehicule = null }) => {
         description: '',
         image_principale: '',
         statut: 'disponible',
-        type_vente: 'vente_et_location'
+        type_vente: 'vente_et_location',
+        immatriculation: ''
       });
       setImagePreview('');
     }
@@ -163,12 +167,22 @@ const VehiculeForm = ({ open, onClose, onSuccess, vehicule = null }) => {
     if (!formData.marque.trim()) newErrors.marque = 'La marque est requise';
     if (!formData.modele.trim()) newErrors.modele = 'Le modèle est requis';
     if (!formData.couleur.trim()) newErrors.couleur = 'La couleur est requise';
-    if (!formData.prix_vente || formData.prix_vente <= 0) {
-      newErrors.prix_vente = 'Le prix de vente doit être supérieur à 0';
+    
+    // Si c'est un véhicule client, l'immatriculation est obligatoire
+    if (fixedClientId && !formData.immatriculation.trim()) {
+      newErrors.immatriculation = 'L\'immatriculation est requise';
     }
-    if (!formData.prix_location_jour || formData.prix_location_jour <= 0) {
-      newErrors.prix_location_jour = 'Le prix de location doit être supérieur à 0';
+    
+    // Si c'est un véhicule boutique, les prix sont obligatoires
+    if (!fixedClientId) {
+      if (!formData.prix_vente || formData.prix_vente <= 0) {
+        newErrors.prix_vente = 'Le prix de vente doit être supérieur à 0';
+      }
+      if (!formData.prix_location_jour || formData.prix_location_jour <= 0) {
+        newErrors.prix_location_jour = 'Le prix de location doit être supérieur à 0';
+      }
     }
+    
     if (formData.annee < 1900 || formData.annee > new Date().getFullYear() + 1) {
       newErrors.annee = 'L\'année doit être valide';
     }
@@ -187,12 +201,31 @@ const VehiculeForm = ({ open, onClose, onSuccess, vehicule = null }) => {
 
     setLoading(true);
     try {
-      if (vehicule) {
-        // Mise à jour
-        await vehiculesAPI.update(vehicule.id, formData);
+      if (fixedClientId) {
+        // Création d'un véhicule client
+        const clientVehiculeData = {
+          client_id: fixedClientId,
+          marque: formData.marque,
+          modele: formData.modele,
+          immatriculation: formData.immatriculation,
+          annee: formData.annee,
+          kilometrage: formData.kilometrage || 0,
+          carburant: formData.carburant,
+          couleur: formData.couleur
+        };
+        
+        if (vehicule) {
+          await clientVehiculesAPI.update(vehicule.id, clientVehiculeData);
+        } else {
+          await clientVehiculesAPI.create(clientVehiculeData);
+        }
       } else {
-        // Création
-        await vehiculesAPI.create(formData);
+        // Création d'un véhicule boutique
+        if (vehicule) {
+          await vehiculesAPI.update(vehicule.id, formData);
+        } else {
+          await vehiculesAPI.create(formData);
+        }
       }
       
       onSuccess();
@@ -221,7 +254,8 @@ const VehiculeForm = ({ open, onClose, onSuccess, vehicule = null }) => {
       description: '',
       image_principale: '',
       statut: 'disponible',
-      type_vente: 'vente_et_location'
+      type_vente: 'vente_et_location',
+      immatriculation: ''
     });
     setImagePreview('');
     setImageFile(null);
@@ -279,6 +313,21 @@ const VehiculeForm = ({ open, onClose, onSuccess, vehicule = null }) => {
               />
             </Grid>
 
+            {/* Immatriculation (seulement pour véhicules clients) */}
+            {fixedClientId && (
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Immatriculation *"
+                  value={formData.immatriculation}
+                  onChange={(e) => handleChange('immatriculation', e.target.value.toUpperCase())}
+                  error={!!errors.immatriculation}
+                  helperText={errors.immatriculation}
+                  placeholder="AB-123-CD"
+                />
+              </Grid>
+            )}
+
             {/* Année */}
             <Grid item xs={12} sm={4}>
               <TextField
@@ -329,32 +378,36 @@ const VehiculeForm = ({ open, onClose, onSuccess, vehicule = null }) => {
             </Grid>
 
             {/* Prix de vente */}
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Prix de vente (FCFA) *"
-                type="number"
-                value={formData.prix_vente}
-                onChange={(e) => handleChange('prix_vente', parseFloat(e.target.value) || '')}
-                error={!!errors.prix_vente}
-                helperText={errors.prix_vente}
-                inputProps={{ min: 0 }}
-              />
-            </Grid>
+            {!fixedClientId && (
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Prix de vente (FCFA) *"
+                  type="number"
+                  value={formData.prix_vente}
+                  onChange={(e) => handleChange('prix_vente', parseFloat(e.target.value) || '')}
+                  error={!!errors.prix_vente}
+                  helperText={errors.prix_vente}
+                  inputProps={{ min: 0 }}
+                />
+              </Grid>
+            )}
 
             {/* Prix de location */}
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Prix de location/jour (FCFA) *"
-                type="number"
-                value={formData.prix_location_jour}
-                onChange={(e) => handleChange('prix_location_jour', parseFloat(e.target.value) || '')}
-                error={!!errors.prix_location_jour}
-                helperText={errors.prix_location_jour}
-                inputProps={{ min: 0 }}
-              />
-            </Grid>
+            {!fixedClientId && (
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Prix de location/jour (FCFA) *"
+                  type="number"
+                  value={formData.prix_location_jour}
+                  onChange={(e) => handleChange('prix_location_jour', parseFloat(e.target.value) || '')}
+                  error={!!errors.prix_location_jour}
+                  helperText={errors.prix_location_jour}
+                  inputProps={{ min: 0 }}
+                />
+              </Grid>
+            )}
 
             {/* Carburant */}
             <Grid item xs={12} sm={4}>
