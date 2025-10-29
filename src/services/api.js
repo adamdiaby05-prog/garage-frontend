@@ -212,6 +212,15 @@ export const garagesAPI = {
   getDemandes: (id) => api.get(`/garages/${id}/demandes`).then((r) => r.data),
 };
 
+// Services pour les employés
+export const employesAPI = {
+  getAll: () => api.get('/employes'),
+  getById: (id) => api.get(`/employes/${id}`),
+  create: (employeData) => api.post('/employes', employeData),
+  update: (id, employeData) => api.put(`/employes/${id}`, employeData),
+  delete: (id) => api.delete(`/employes/${id}`),
+};
+
 // Services pour les demandes de prestations
 export const demandesPrestationsAPI = {
   getAll: () => api.get('/prestations/demandes').then((r) => r.data),

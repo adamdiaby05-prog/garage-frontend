@@ -2135,6 +2135,274 @@ async function startServer() {
     console.log('📁 Dossier uploads/images créé');
   }
   
+  // ========== ROUTES POUR LES CLIENTS ==========
+  // Récupérer tous les clients
+  app.get('/api/clients', async (req, res) => {
+    try {
+      const [rows] = await pool.execute(`
+        SELECT 
+          c.id as id_client,
+          c.nom,
+          c.prenom,
+          c.email,
+          c.telephone,
+          c.adresse,
+          c.created_at,
+          COUNT(v.id) as nombre_vehicules
+        FROM clients c
+        LEFT JOIN vehicules v ON c.id = v.client_id
+        GROUP BY c.id, c.nom, c.prenom, c.email, c.telephone, c.adresse, c.created_at
+        ORDER BY c.created_at DESC
+      `);
+      
+      res.json(rows);
+    } catch (error) {
+      console.error('Erreur récupération clients:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Récupérer un client par ID
+  app.get('/api/clients/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [rows] = await pool.execute(`
+        SELECT 
+          c.id as id_client,
+          c.nom,
+          c.prenom,
+          c.email,
+          c.telephone,
+          c.adresse,
+          c.created_at
+        FROM clients c
+        WHERE c.id = ?
+      `, [id]);
+      
+      if (rows.length === 0) {
+        return res.status(404).json({ error: 'Client non trouvé' });
+      }
+      
+      res.json(rows[0]);
+    } catch (error) {
+      console.error('Erreur récupération client:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Créer un nouveau client
+  app.post('/api/clients', async (req, res) => {
+    try {
+      const { nom, prenom, email, telephone, adresse } = req.body;
+      
+      if (!nom || !prenom || !email) {
+        return res.status(400).json({ error: 'Nom, prénom et email sont obligatoires' });
+      }
+      
+      const [result] = await pool.execute(`
+        INSERT INTO clients (nom, prenom, email, telephone, adresse, created_at)
+        VALUES (?, ?, ?, ?, ?, NOW())
+      `, [nom, prenom, email, telephone || '', adresse || '']);
+      
+      res.status(201).json({
+        success: true,
+        message: 'Client créé avec succès',
+        client_id: result.insertId
+      });
+    } catch (error) {
+      console.error('Erreur création client:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Mettre à jour un client
+  app.put('/api/clients/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { nom, prenom, email, telephone, adresse } = req.body;
+      
+      if (!nom || !prenom || !email) {
+        return res.status(400).json({ error: 'Nom, prénom et email sont obligatoires' });
+      }
+      
+      const [result] = await pool.execute(`
+        UPDATE clients 
+        SET nom = ?, prenom = ?, email = ?, telephone = ?, adresse = ?
+        WHERE id = ?
+      `, [nom, prenom, email, telephone || '', adresse || '', id]);
+      
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Client non trouvé' });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Client mis à jour avec succès'
+      });
+    } catch (error) {
+      console.error('Erreur mise à jour client:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Supprimer un client
+  app.delete('/api/clients/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [result] = await pool.execute('DELETE FROM clients WHERE id = ?', [id]);
+      
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Client non trouvé' });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Client supprimé avec succès'
+      });
+    } catch (error) {
+      console.error('Erreur suppression client:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // ========== ROUTES POUR LES EMPLOYÉS ==========
+  // Récupérer tous les employés
+  app.get('/api/employes', async (req, res) => {
+    try {
+      const [rows] = await pool.execute(`
+        SELECT 
+          e.id as id_employe,
+          e.nom,
+          e.prenom,
+          e.email,
+          e.telephone,
+          e.role as specialite,
+          e.date_embauche,
+          e.salaire,
+          e.statut,
+          e.created_at
+        FROM employes e
+        ORDER BY e.created_at DESC
+      `);
+      
+      res.json(rows);
+    } catch (error) {
+      console.error('Erreur récupération employés:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Récupérer un employé par ID
+  app.get('/api/employes/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [rows] = await pool.execute(`
+        SELECT 
+          e.id as id_employe,
+          e.nom,
+          e.prenom,
+          e.email,
+          e.telephone,
+          e.role as specialite,
+          e.date_embauche,
+          e.salaire,
+          e.statut,
+          e.created_at
+        FROM employes e
+        WHERE e.id = ?
+      `, [id]);
+      
+      if (rows.length === 0) {
+        return res.status(404).json({ error: 'Employé non trouvé' });
+      }
+      
+      res.json(rows[0]);
+    } catch (error) {
+      console.error('Erreur récupération employé:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Créer un nouvel employé
+  app.post('/api/employes', async (req, res) => {
+    try {
+      const { nom, prenom, email, telephone, role, date_embauche, salaire, statut } = req.body;
+      
+      if (!nom || !prenom || !email) {
+        return res.status(400).json({ error: 'Nom, prénom et email sont obligatoires' });
+      }
+      
+      const [result] = await pool.execute(`
+        INSERT INTO employes (nom, prenom, email, telephone, role, date_embauche, salaire, statut, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+      `, [nom, prenom, email, telephone || '', role || 'mecanicien', date_embauche, salaire || 0, statut || 'actif']);
+      
+      res.status(201).json({
+        success: true,
+        message: 'Employé créé avec succès',
+        employe_id: result.insertId
+      });
+    } catch (error) {
+      console.error('Erreur création employé:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Mettre à jour un employé
+  app.put('/api/employes/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { nom, prenom, email, telephone, role, date_embauche, salaire, statut } = req.body;
+      
+      if (!nom || !prenom || !email) {
+        return res.status(400).json({ error: 'Nom, prénom et email sont obligatoires' });
+      }
+      
+      const [result] = await pool.execute(`
+        UPDATE employes 
+        SET nom = ?, prenom = ?, email = ?, telephone = ?, role = ?, 
+            date_embauche = ?, salaire = ?, statut = ?
+        WHERE id = ?
+      `, [nom, prenom, email, telephone || '', role || 'mecanicien', date_embauche, salaire || 0, statut || 'actif', id]);
+      
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Employé non trouvé' });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Employé mis à jour avec succès'
+      });
+    } catch (error) {
+      console.error('Erreur mise à jour employé:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Supprimer un employé
+  app.delete('/api/employes/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [result] = await pool.execute('DELETE FROM employes WHERE id = ?', [id]);
+      
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Employé non trouvé' });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Employé supprimé avec succès'
+      });
+    } catch (error) {
+      console.error('Erreur suppression employé:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
   // ========== SERVIR L'APPLICATION REACT (APRÈS TOUTES LES ROUTES API) ==========
   if (process.env.NODE_ENV === 'production') {
     console.log('🌐 Configuration des fichiers statiques React...');

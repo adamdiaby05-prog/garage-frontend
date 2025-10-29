@@ -54,19 +54,20 @@ const ReparationsPage = () => {
     try {
       setLoading(true);
       const response = await reparationsAPI.getAll();
-      setReparations(response.data);
-      setError(null);
       
       // Debug: Afficher les statuts des réparations
-      console.log('🔍 Debug - Réparations chargées:', response.data.length);
-      console.log('🔍 Debug - Statuts des réparations:', response.data.map(r => ({ 
+      const reparationsData = Array.isArray(response.data) ? response.data : [];
+      setReparations(reparationsData);
+      setError(null);
+      console.log('🔍 Debug - Réparations chargées:', reparationsData.length);
+      console.log('🔍 Debug - Statuts des réparations:', reparationsData.map(r => ({ 
         id: r.id_reparation || r.id, 
         numero: r.numero, 
         statut: r.statut 
       })));
       
       // Compter les réparations par statut
-      const statuts = response.data.reduce((acc, r) => {
+      const statuts = reparationsData.reduce((acc, r) => {
         acc[r.statut] = (acc[r.statut] || 0) + 1;
         return acc;
       }, {});
