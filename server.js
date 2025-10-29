@@ -496,8 +496,23 @@ app.post('/api/auth/login', async (req, res) => {
       user
     });
   } catch (error) {
-    console.error('Erreur login:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error('❌ Erreur login détaillée:', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      sqlState: error.sqlState,
+      stack: error.stack
+    });
+    
+    // Gestion spécifique des erreurs MySQL
+    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+      return res.status(500).json({ error: 'Erreur de connexion à la base de données' });
+    }
+    
+    res.status(500).json({ 
+      error: 'Erreur serveur', 
+      details: process.env.NODE_ENV === 'development' ? error.message : 'Erreur interne'
+    });
   }
 });
 
@@ -612,6 +627,45 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 // ========== ROUTES BOUTIQUE ==========
+// Récupérer toutes les pièces détachées
+app.get('/api/boutique/pieces', async (req, res) => {
+  try {
+    console.log('🔧 Récupération des pièces détachées...');
+    
+    const [rows] = await pool.execute(`
+      SELECT
+        id,
+        nom,
+        description,
+        prix,
+        stock,
+        categorie,
+        marque,
+        reference,
+        image_principale as image,
+        created_at,
+        updated_at
+      FROM pieces_detachees
+      ORDER BY created_at DESC
+    `);
+
+    console.log(`✅ ${rows.length} pièces détachées trouvées`);
+    
+    res.json({
+      success: true,
+      data: rows,
+      count: rows.length
+    });
+  } catch (error) {
+    console.error('❌ Erreur lors de la récupération des pièces:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Erreur lors de la récupération des pièces',
+      details: process.env.NODE_ENV === 'development' ? error.message : 'Erreur interne'
+    });
+  }
+});
+
 // Récupérer tous les produits (véhicules + pièces)
 app.get('/api/boutique/vehicules', async (req, res) => {
   try {
@@ -699,10 +753,26 @@ app.get('/api/boutique/vehicules', async (req, res) => {
     // Combiner les deux listes
     const allProducts = [...vehicules, ...pieces];
 
-    res.json(allProducts);
+    console.log(`✅ ${vehicules.length} véhicules et ${pieces.length} pièces trouvés`);
+    
+    res.json({
+      success: true,
+      data: allProducts,
+      count: allProducts.length,
+      vehicules: vehicules.length,
+      pieces: pieces.length
+    });
   } catch (error) {
-    console.error('Erreur lors de la récupération des produits:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error('❌ Erreur lors de la récupération des produits:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      success: false,
+      error: 'Erreur serveur',
+      details: process.env.NODE_ENV === 'development' ? error.message : 'Erreur interne'
+    });
   }
 });
 
