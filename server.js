@@ -2403,6 +2403,172 @@ async function startServer() {
     }
   });
 
+  // ========== ROUTES POUR LES DEMANDES DE PRESTATIONS ==========
+  // Récupérer toutes les demandes de prestations
+  app.get('/api/prestations/demandes', async (req, res) => {
+    try {
+      const [rows] = await pool.execute(`
+        SELECT 
+          dp.id,
+          dp.client_id,
+          dp.vehicule_id,
+          dp.service_id,
+          dp.garage_id,
+          dp.date_demande,
+          dp.date_souhaitee,
+          dp.description_probleme,
+          dp.statut,
+          dp.prix_estime,
+          dp.duree_estimee,
+          dp.created_at,
+          c.nom as client_nom,
+          c.prenom as client_prenom,
+          c.email as client_email,
+          c.telephone as client_telephone,
+          v.marque as vehicule_marque,
+          v.modele as vehicule_modele,
+          v.immatriculation as vehicule_immatriculation,
+          s.nom as service_nom,
+          s.description as service_description,
+          s.prix as service_prix,
+          g.nom_garage as garage_nom
+        FROM demandes_prestations dp
+        LEFT JOIN clients c ON dp.client_id = c.id
+        LEFT JOIN vehicules v ON dp.vehicule_id = v.id
+        LEFT JOIN services s ON dp.service_id = s.id
+        LEFT JOIN garages g ON dp.garage_id = g.id
+        ORDER BY dp.created_at DESC
+      `);
+      
+      res.json(rows);
+    } catch (error) {
+      console.error('Erreur récupération demandes prestations:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Récupérer une demande de prestation par ID
+  app.get('/api/prestations/demandes/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [rows] = await pool.execute(`
+        SELECT 
+          dp.id,
+          dp.client_id,
+          dp.vehicule_id,
+          dp.service_id,
+          dp.garage_id,
+          dp.date_demande,
+          dp.date_souhaitee,
+          dp.description_probleme,
+          dp.statut,
+          dp.prix_estime,
+          dp.duree_estimee,
+          dp.created_at,
+          c.nom as client_nom,
+          c.prenom as client_prenom,
+          c.email as client_email,
+          c.telephone as client_telephone,
+          v.marque as vehicule_marque,
+          v.modele as vehicule_modele,
+          v.immatriculation as vehicule_immatriculation,
+          s.nom as service_nom,
+          s.description as service_description,
+          s.prix as service_prix,
+          g.nom_garage as garage_nom
+        FROM demandes_prestations dp
+        LEFT JOIN clients c ON dp.client_id = c.id
+        LEFT JOIN vehicules v ON dp.vehicule_id = v.id
+        LEFT JOIN services s ON dp.service_id = s.id
+        LEFT JOIN garages g ON dp.garage_id = g.id
+        WHERE dp.id = ?
+      `, [id]);
+      
+      if (rows.length === 0) {
+        return res.status(404).json({ error: 'Demande non trouvée' });
+      }
+      
+      res.json(rows[0]);
+    } catch (error) {
+      console.error('Erreur récupération demande prestation:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Accepter une demande de prestation
+  app.patch('/api/prestations/demandes/:id/accept', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { garage_id, prix_estime, duree_estimee } = req.body;
+      
+      const [result] = await pool.execute(`
+        UPDATE demandes_prestations 
+        SET garage_id = ?, prix_estime = ?, duree_estimee = ?, statut = 'acceptee'
+        WHERE id = ?
+      `, [garage_id, prix_estime || null, duree_estimee || null, id]);
+      
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Demande non trouvée' });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Demande acceptée avec succès'
+      });
+    } catch (error) {
+      console.error('Erreur acceptation demande:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Mettre à jour le statut d'une demande
+  app.patch('/api/prestations/demandes/:id/statut', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { statut } = req.body;
+      
+      const [result] = await pool.execute(`
+        UPDATE demandes_prestations 
+        SET statut = ?
+        WHERE id = ?
+      `, [statut, id]);
+      
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Demande non trouvée' });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Statut mis à jour avec succès'
+      });
+    } catch (error) {
+      console.error('Erreur mise à jour statut:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Supprimer une demande de prestation
+  app.delete('/api/prestations/demandes/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [result] = await pool.execute('DELETE FROM demandes_prestations WHERE id = ?', [id]);
+      
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Demande non trouvée' });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Demande supprimée avec succès'
+      });
+    } catch (error) {
+      console.error('Erreur suppression demande:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
   // ========== SERVIR L'APPLICATION REACT (APRÈS TOUTES LES ROUTES API) ==========
   if (process.env.NODE_ENV === 'production') {
     console.log('🌐 Configuration des fichiers statiques React...');
