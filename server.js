@@ -420,9 +420,6 @@ async function initializeDatabase() {
 }
 
 // Routes de santé
-app.get('/', (req, res) => {
-  res.send('Garage API backend is running - Images enabled');
-});
 
 app.get('/api/health', (req, res) => {
   res.json({ 
