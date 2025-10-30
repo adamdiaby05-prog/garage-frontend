@@ -55,6 +55,7 @@ import {
 import * as XLSX from 'xlsx';
 import { clientsAPI } from '../services/api';
 import ClientForm from '../components/forms/ClientForm';
+import { normalizeApiData } from '../utils/apiUtils';
 
 const ClientsPage = () => {
   const [showClientForm, setShowClientForm] = useState(false);
@@ -161,7 +162,7 @@ const ClientsPage = () => {
     try {
       setLoading(true);
       const response = await clientsAPI.getAll();
-      const rows = Array.isArray(response.data) ? response.data : [];
+      const rows = normalizeApiData(response);
       console.log('Clients chargés:', rows);
       console.log('Nombre de clients:', rows.length);
       const normalized = rows.map((r) => ({

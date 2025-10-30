@@ -29,6 +29,7 @@ import { Add, Visibility, CheckCircle, Delete } from '@mui/icons-material';
 import ModernPageTemplate from '../components/ModernPageTemplate';
 import { Assignment } from '@mui/icons-material';
 import { demandesPrestationsAPI, garagesAPI, usersAPI } from '../services/api';
+import { normalizeApiDataWithLogging } from '../utils/apiUtils';
 
 const DemandesPrestationsPage = () => {
   const [demandes, setDemandes] = useState([]);
@@ -58,11 +59,10 @@ const DemandesPrestationsPage = () => {
         garagesAPI.getAll()
       ]);
       
-      // L'API retourne un objet avec une propriété 'value' qui contient le tableau
-      setDemandes(Array.isArray(demandesData) ? demandesData : (demandesData?.value || []));
+      const demandesList = normalizeApiDataWithLogging(demandesData, 'Demandes');
+      setDemandes(demandesList);
 
-      // Normaliser garages depuis l'API garages
-      const baseGarages = Array.isArray(garagesData) ? garagesData : (garagesData?.value || []);
+      const baseGarages = normalizeApiDataWithLogging(garagesData, 'Garages');
 
       // Ajouter aussi les utilisateurs ayant role 'garage'
       let garageUsers = [];

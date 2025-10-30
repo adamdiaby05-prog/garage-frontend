@@ -26,6 +26,7 @@ import ModernPageTemplate from '../components/ModernPageTemplate';
 import { Business } from '@mui/icons-material';
 import { garagesAPI, usersAPI } from '../services/api';
 import GarageForm from '../components/forms/GarageForm';
+import { normalizeApiDataWithLogging } from '../utils/apiUtils';
 
 const GaragesPage = () => {
   const [garages, setGarages] = useState([]);
@@ -43,9 +44,7 @@ const GaragesPage = () => {
       setLoading(true);
       console.log('🔍 Chargement des garages...');
       const garagesData = await garagesAPI.getAll();
-      console.log('📊 Données garages reçues:', garagesData);
-      const garagesList = Array.isArray(garagesData) ? garagesData : (garagesData?.value || []);
-      console.log('📋 Liste des garages normalisée:', garagesList);
+      const garagesList = normalizeApiDataWithLogging(garagesData, 'Garages');
 
       // Charger aussi les utilisateurs avec role 'garage'
       let garageUsers = [];
