@@ -392,6 +392,11 @@ const LoginPage = () => {
                     to="/"
                     onMouseEnter={() => setHoverKey('home')}
                     onMouseLeave={() => setHoverKey(null)}
+                    onClick={() => {
+                      console.log('🏠 Bouton "Retour à l\'accueil" cliqué');
+                      navigate('/');
+                    }}
+                    startIcon={<ArrowBack />}
                     sx={{
                       color: '#6b7280',
                       textTransform: 'none',
@@ -403,7 +408,7 @@ const LoginPage = () => {
                     }}
                   >
                     Retour à l'accueil
-            </Button>
+                  </Button>
                 </Box>
               </Grid>
             </Grid>
