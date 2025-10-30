@@ -2805,6 +2805,53 @@ async function startServer() {
     }
   });
 
+  // ========== ROUTES POUR LES GARAGES ==========
+  // Récupérer les demandes d'un garage spécifique
+  app.get('/api/garages/:id/demandes', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [rows] = await pool.execute(`
+        SELECT 
+          dp.id,
+          dp.client_id,
+          dp.vehicule_id,
+          dp.service_id,
+          dp.garage_id,
+          dp.date_demande,
+          dp.date_souhaitee,
+          dp.description_probleme,
+          dp.statut,
+          dp.prix_estime,
+          dp.duree_estimee,
+          dp.created_at,
+          c.nom as client_nom,
+          c.prenom as client_prenom,
+          c.email as client_email,
+          c.telephone as client_telephone,
+          v.marque as vehicule_marque,
+          v.modele as vehicule_modele,
+          v.immatriculation as vehicule_immatriculation,
+          s.nom as service_nom,
+          s.description as service_description,
+          s.prix as service_prix,
+          g.nom_garage as garage_nom
+        FROM demandes_prestations dp
+        LEFT JOIN clients c ON dp.client_id = c.id
+        LEFT JOIN vehicules v ON dp.vehicule_id = v.id
+        LEFT JOIN services s ON dp.service_id = s.id
+        LEFT JOIN garages g ON dp.garage_id = g.id
+        WHERE dp.garage_id = ?
+        ORDER BY dp.created_at DESC
+      `, [id]);
+      
+      res.json(rows);
+    } catch (error) {
+      console.error('Erreur récupération demandes garage:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
   // ========== SERVIR L'APPLICATION REACT (APRÈS TOUTES LES ROUTES API) ==========
   if (process.env.NODE_ENV === 'production') {
     console.log('🌐 Configuration des fichiers statiques React...');
