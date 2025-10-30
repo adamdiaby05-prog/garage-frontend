@@ -529,6 +529,12 @@ app.get('/api/auth/me', async (req, res) => {
     }
     
     const token = authHeader.substring(7);
+    
+    // Vérifier si le token est valide
+    if (!token || token === 'undefined' || token === 'null') {
+      return res.status(401).json({ error: 'Token invalide' });
+    }
+    
     const decoded = jwt.verify(token, JWT_SECRET);
     
     // Récupérer les données utilisateur depuis la base de données
@@ -553,9 +559,13 @@ app.get('/api/auth/me', async (req, res) => {
       garage_id: dbUser.garage_id || null
     };
     
+    console.log('🔍 Utilisateur récupéré via /auth/me:', user);
     res.json({ user });
   } catch (error) {
     console.error('Erreur récupération utilisateur:', error);
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: 'Token invalide' });
+    }
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -580,6 +590,7 @@ app.post('/api/auth/register', async (req, res) => {
     
     const userId = userResult.insertId;
     let clientId = null;
+    let garageId = null;
     
     // Si c'est un client, créer aussi un enregistrement dans la table clients
     if (userType === 'client') {
@@ -595,6 +606,20 @@ app.post('/api/auth/register', async (req, res) => {
         'UPDATE utilisateurs SET client_id = ? WHERE id = ?',
         [clientId, userId]
       );
+    } else if (userType === 'garage') {
+      // Si c'est un garage, créer aussi un enregistrement dans la table garages
+      const [garageResult] = await pool.execute(
+        'INSERT INTO garages (nom_garage, email, telephone, ville, statut, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+        [nom || 'Garage ' + email, email, telephone || '', 'Abidjan', 'actif']
+      );
+      
+      garageId = garageResult.insertId;
+      
+      // Mettre à jour l'utilisateur avec le garage_id
+      await pool.execute(
+        'UPDATE utilisateurs SET garage_id = ? WHERE id = ?',
+        [garageId, userId]
+      );
     }
     
     res.status(201).json({
@@ -602,6 +627,7 @@ app.post('/api/auth/register', async (req, res) => {
       message: 'Utilisateur créé avec succès',
       userId: userId,
       clientId: clientId,
+      garageId: garageId,
       userType: userType
     });
   } catch (error) {
