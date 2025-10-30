@@ -41,8 +41,11 @@ const GaragesPage = () => {
   const fetchGarages = async () => {
     try {
       setLoading(true);
+      console.log('🔍 Chargement des garages...');
       const garagesData = await garagesAPI.getAll();
+      console.log('📊 Données garages reçues:', garagesData);
       const garagesList = Array.isArray(garagesData) ? garagesData : (garagesData?.value || []);
+      console.log('📋 Liste des garages normalisée:', garagesList);
 
       // Charger aussi les utilisateurs avec role 'garage'
       let garageUsers = [];

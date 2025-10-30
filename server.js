@@ -2832,6 +2832,143 @@ async function startServer() {
   });
 
   // ========== ROUTES POUR LES GARAGES ==========
+  // Récupérer tous les garages
+  app.get('/api/garages', async (req, res) => {
+    try {
+      const [rows] = await pool.execute(`
+        SELECT 
+          g.id,
+          g.nom_garage,
+          g.adresse,
+          g.ville,
+          g.code_postal,
+          g.telephone,
+          g.email,
+          g.siret,
+          g.specialites,
+          g.statut,
+          g.created_at,
+          g.updated_at,
+          COUNT(d.id) as nombre_demandes
+        FROM garages g
+        LEFT JOIN demandes_prestations d ON g.id = d.garage_id
+        GROUP BY g.id, g.nom_garage, g.adresse, g.ville, g.code_postal, g.telephone, g.email, g.siret, g.specialites, g.statut, g.created_at, g.updated_at
+        ORDER BY g.created_at DESC
+      `);
+      
+      res.json(rows);
+    } catch (error) {
+      console.error('Erreur récupération garages:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Récupérer un garage par ID
+  app.get('/api/garages/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [rows] = await pool.execute(`
+        SELECT 
+          g.id,
+          g.nom_garage,
+          g.adresse,
+          g.ville,
+          g.code_postal,
+          g.telephone,
+          g.email,
+          g.siret,
+          g.specialites,
+          g.statut,
+          g.created_at,
+          g.updated_at
+        FROM garages g
+        WHERE g.id = ?
+      `, [id]);
+      
+      if (rows.length === 0) {
+        return res.status(404).json({ error: 'Garage non trouvé' });
+      }
+      
+      res.json(rows[0]);
+    } catch (error) {
+      console.error('Erreur récupération garage:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Créer un nouveau garage
+  app.post('/api/garages', async (req, res) => {
+    try {
+      const { nom_garage, adresse, ville, code_postal, telephone, email, siret, specialites, statut } = req.body;
+      
+      if (!nom_garage || !email) {
+        return res.status(400).json({ error: 'Nom du garage et email sont requis' });
+      }
+      
+      const [result] = await pool.execute(`
+        INSERT INTO garages (nom_garage, adresse, ville, code_postal, telephone, email, siret, specialites, statut, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+      `, [nom_garage, adresse || '', ville || '', code_postal || '', telephone || '', email, siret || '', specialites || '', statut || 'actif']);
+      
+      res.status(201).json({
+        success: true,
+        message: 'Garage créé avec succès',
+        id: result.insertId
+      });
+    } catch (error) {
+      console.error('Erreur création garage:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Mettre à jour un garage
+  app.put('/api/garages/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { nom_garage, adresse, ville, code_postal, telephone, email, siret, specialites, statut } = req.body;
+      
+      const [result] = await pool.execute(`
+        UPDATE garages 
+        SET nom_garage = ?, adresse = ?, ville = ?, code_postal = ?, telephone = ?, email = ?, siret = ?, specialites = ?, statut = ?, updated_at = NOW()
+        WHERE id = ?
+      `, [nom_garage, adresse, ville, code_postal, telephone, email, siret, specialites, statut, id]);
+      
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Garage non trouvé' });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Garage mis à jour avec succès'
+      });
+    } catch (error) {
+      console.error('Erreur mise à jour garage:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  // Supprimer un garage
+  app.delete('/api/garages/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [result] = await pool.execute('DELETE FROM garages WHERE id = ?', [id]);
+      
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Garage non trouvé' });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Garage supprimé avec succès'
+      });
+    } catch (error) {
+      console.error('Erreur suppression garage:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
   // Récupérer les demandes d'un garage spécifique
   app.get('/api/garages/:id/demandes', async (req, res) => {
     try {
