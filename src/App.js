@@ -17,7 +17,6 @@ import FacturesPage from './pages/FacturesPage';
 import PiecesPage from './pages/PiecesPage';
 import FournisseursPage from './pages/FournisseursPage';
 import ServicesPage from './pages/ServicesPage';
-import RendezVousPage from './pages/RendezVousPage';
 import BoutiquePage from './pages/BoutiquePage';
 import MesVehiculesPage from './pages/MesVehiculesPage';
 import PrendreRdvPage from './pages/PrendreRdvPage';
@@ -259,7 +258,6 @@ const App = () => {
               <Route path="/pieces" element={<ProtectedRoute element={<PiecesPage />} roles={[ 'admin', 'mecanicien' ]} />} />
               <Route path="/fournisseurs" element={<ProtectedRoute element={<FournisseursPage />} roles={[ 'admin' ]} />} />
               <Route path="/services" element={<ProtectedRoute element={<ServicesPage />} roles={[ 'admin' ]} />} />
-              <Route path="/rendez-vous" element={<ProtectedRoute element={<RendezVousPage userRole={userRole} />} roles={[ 'admin', 'mecanicien', 'client' ]} />} />
               <Route path="/demandes-prestations" element={<ProtectedRoute element={<DemandesPrestationsPage />} roles={[ 'admin' ]} />} />
               <Route path="/garages" element={<ProtectedRoute element={<GaragesPage />} roles={[ 'admin' ]} />} />
               <Route path="/boutique" element={<ProtectedRoute element={<BoutiquePage />} roles={[ 'admin' ]} />} />

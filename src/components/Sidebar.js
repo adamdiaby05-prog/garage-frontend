@@ -240,7 +240,6 @@ const Sidebar = ({ userRole = 'admin' }) => {
           { text: 'Pièces', icon: <Inventory />, path: '/pieces', badge: '156', color: '#34d399', priority: 'low' },
           { text: 'Fournisseurs', icon: <Business />, path: '/fournisseurs', badge: '12', color: '#6ee7b7', priority: 'low' },
           { text: 'Services', icon: <Settings />, path: '/services', badge: '8', color: '#00ff88', priority: 'low' },
-          { text: 'Rendez-vous', icon: <Schedule />, path: '/rendez-vous', badge: stats?.rendezVous?.toString() || '0', color: '#059669', priority: 'medium' },
           { text: 'Demandes Prestations', icon: <Build />, path: '/demandes-prestations', badge: stats?.demandesPrestations?.toString() || '0', color: '#10b981', priority: 'high' },
           { text: 'Garages', icon: <Business />, path: '/garages', badge: stats?.garages?.toString() || '0', color: '#34d399', priority: 'medium' },
           { text: 'Boutique', icon: <Store />, path: '/boutique', badge: '89', color: '#6ee7b7', priority: 'low' },
