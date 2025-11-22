@@ -19,7 +19,6 @@ import FournisseursPage from './pages/FournisseursPage';
 import ServicesPage from './pages/ServicesPage';
 import BoutiquePage from './pages/BoutiquePage';
 import MesVehiculesPage from './pages/MesVehiculesPage';
-import PrendreRdvPage from './pages/PrendreRdvPage';
 import MesReparationsPage from './pages/MesReparationsPage';
 import MesReparationsClientPage from './pages/MesReparationsClientPage';
 import MesFacturesPage from './pages/MesFacturesPage';
@@ -282,7 +281,6 @@ const App = () => {
               <Route path="/mes-reparations" element={<ProtectedRoute element={<MesReparationsPage />} roles={[ 'client' ]} />} />
               <Route path="/mes-factures" element={<ProtectedRoute element={<MesFacturesPage />} roles={[ 'client', 'garage' ]} />} />
               <Route path="/mes-reparations-client" element={<ProtectedRoute element={<MesReparationsClientPage />} roles={[ 'client' ]} />} />
-              <Route path="/prendre-rdv" element={<ProtectedRoute element={<PrendreRdvPage />} roles={[ 'client' ]} />} />
               <Route path="/demander-prestation" element={<ProtectedRoute element={<DemanderPrestationPage />} roles={[ 'client' ]} />} />
               
               {/* Route par défaut */}

@@ -269,7 +269,6 @@ const Sidebar = ({ userRole = 'admin' }) => {
           { text: 'Mes Véhicules', icon: <DirectionsCar />, path: '/mes-vehicules', badge: stats?.vehicules?.toString() || '0', color: '#ea580c' },
           { text: 'Mes Réparations', icon: <Build />, path: '/mes-reparations-client', badge: stats?.reparations?.toString() || '0', color: '#f59e0b' },
           { text: 'Mes Factures', icon: <Receipt />, path: '/mes-factures', badge: stats?.factures?.toString() || '0', color: '#fbbf24' },
-          { text: 'Prendre RDV', icon: <Schedule />, path: '/prendre-rdv', badge: null, color: '#fb923c' },
           { text: 'Demander Prestation', icon: <Build />, path: '/demander-prestation', badge: null, color: '#059669' }
         ];
       
